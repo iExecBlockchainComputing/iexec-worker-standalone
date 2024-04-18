@@ -1,0 +1,153 @@
+plugins {
+    id 'java'
+    id 'io.freefair.lombok' version '8.6'
+    id 'org.springframework.boot' version '2.7.17'
+    id 'io.spring.dependency-management' version '1.1.4'
+    id 'jacoco'
+    id 'org.sonarqube' version '5.0.0.4638'
+    id 'maven-publish'
+}
+
+ext {
+    springCloudVersion = '2021.0.8'
+    jjwtVersion = '0.11.5'
+    mongockVersion = '4.2.7.BETA'
+    testContainersVersion = '1.19.0'
+}
+
+if (!project.hasProperty('gitBranch')) {
+    ext.gitBranch = 'git rev-parse --abbrev-ref HEAD'.execute().text.trim()
+}
+
+allprojects {
+    group = 'com.iexec.standalone'
+    if (gitBranch != 'main' && gitBranch != 'master' && !(gitBranch ==~ '(release|hotfix|support)/.*')) {
+        version += '-NEXT-SNAPSHOT'
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        maven {
+            url "https://docker-regis-adm.iex.ec/repository/maven-public/"
+            credentials {
+                username nexusUser
+                password nexusPassword
+            }
+        }
+        maven { url "https://jitpack.io" }
+    }
+    java {
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(17))
+        }
+        sourceCompatibility = "11"
+        targetCompatibility = "11"
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+dependencies {
+    // iexec
+    implementation "com.iexec.commons:iexec-commons-poco:$iexecCommonsPocoVersion"
+    implementation "com.iexec.common:iexec-common:$iexecCommonVersion"
+    implementation "com.iexec.blockchain:iexec-blockchain-adapter-api-library:$iexecBlockchainAdapterVersion"
+    implementation "com.iexec.result-proxy:iexec-result-proxy-library:$iexecResultVersion"
+    implementation "com.iexec.sms:iexec-sms-library:$iexecSmsVersion"
+    implementation project(':iexec-worker-standalone-library')
+
+    // spring
+    implementation "org.springframework.boot:spring-boot-starter"
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-aop"
+    implementation "org.springframework.boot:spring-boot-starter-data-mongodb"
+    implementation "org.springframework.boot:spring-boot-starter-hateoas"
+    implementation "org.springframework.boot:spring-boot-starter-security"
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation "org.springframework.retry:spring-retry"
+
+    // Spring Doc
+    implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+}
+
+springBoot {
+    buildInfo()
+}
+
+tasks.named("bootJar") {
+    manifest {
+        attributes("Implementation-Title": "iExec Worker Standalone",
+                "Implementation-Version": project.version)
+    }
+}
+
+testing {
+    suites {
+        test {
+            useJUnitJupiter()
+            dependencies {
+                implementation 'org.springframework.boot:spring-boot-starter-test'
+
+                // awaitility
+                implementation 'org.awaitility:awaitility'
+
+                // mongo
+                implementation "org.testcontainers:junit-jupiter:$testContainersVersion"
+                implementation "org.testcontainers:mongodb:$testContainersVersion"
+            }
+        }
+    }
+}
+
+tasks.withType(Test).configureEach {
+    finalizedBy jacocoTestReport
+    systemProperty "mongo.image", "mongo:4.4.28-focal"
+}
+
+tasks.register('itest') {
+    group 'Verification'
+    description 'Runs the integration tests.'
+}
+
+// sonarqube code coverage requires jacoco XML report
+jacocoTestReport {
+    reports {
+        xml.required = true
+    }
+}
+tasks.sonarqube.dependsOn tasks.jacocoTestReport
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            artifact tasks.named("bootJar")
+            from components.java
+        }
+    }
+    repositories {
+        maven {
+            credentials {
+                username nexusUser
+                password nexusPassword
+            }
+            url project.hasProperty('nexusUrl') ? nexusUrl : ''
+        }
+    }
+}
+
+ext.jarPathForOCI = relativePath(tasks.bootJar.outputs.files.singleFile)
+ext.gitShortCommit = 'git rev-parse --short=8 HEAD'.execute().text.trim()
+ext.ociImageName = 'local/' + ['bash', '-c', 'basename $(git config --get remote.origin.url) .git'].execute().text.trim()
+
+tasks.register('buildImage', Exec) {
+    group 'Build'
+    description 'Builds an OCI image from a Dockerfile.'
+    dependsOn bootJar
+    commandLine 'docker', 'build', '--build-arg', 'jar=' + jarPathForOCI, '-t', ociImageName + ':dev', '.'
+}

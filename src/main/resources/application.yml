@@ -1,0 +1,86 @@
+server:
+  port: ${IEXEC_WORKER_STANDALONE_PORT:13000}
+
+spring:
+  data:
+    mongodb:
+      database: iexec
+      host: ${MONGO_HOST:localhost}
+      port: ${MONGO_PORT:13002}
+      auto-index-creation: true # Auto-index creation is disabled by default starting with Spring Data MongoDB 3.x.
+  config.import: "configserver:${IEXEC_PLATFORM_REGISTRY:http://localhost:8888}" # configserver:http://platform-registry:8888
+  cloud.config:
+    profile: ${IEXEC_PLATFORM_REGISTRY_STACK:} # mainnet, bellecour3, 1234, ..
+    label: ${IEXEC_PLATFORM_REGISTRY_LABEL:} # main, develop, v10, 07998be
+mongock:
+  runner-type: InitializingBean
+  change-logs-scan-package:
+    - com.iexec.core.configuration
+
+cron:
+  # all in milliseconds
+  metrics.refresh.period: 20000 #20s
+  deal.replay: 60000  # 1m
+  detector:
+    worker-lost: 30000  # 30s
+    chain:
+      unstarted-tx: 300000  # 5m
+      initialize: 30000   # 30s
+      contribute: 30000   # 30s
+      consensus-reached: 30000 # 30s
+      reveal: 30000   # 30s
+      contribute-and-finalize: 30000   # 30s
+      finalize: 30000   # 30s
+      final-deadline: 30000   # 30s
+    timeout:
+      contribute: 120000  # 2m
+      reveal: ${REVEAL_TIMEOUT_PERIOD:120000}  # 2m
+      result-upload: 30000   # 30s
+
+wallet:
+  encryptedFilePath: ${IEXEC_WORKER_STANDALONE_WALLET_PATH:./src/main/resources/wallet/encrypted-wallet_scheduler.json}
+  password: ${IEXEC_WORKER_STANDALONE_WALLET_PASSWORD:whatever}
+
+chain:
+  privateAddress: ${IEXEC_PRIVATE_CHAIN_ADDRESS:http://localhost:8545}
+  poolAddress: ${POOL_ADDRESS:0x365E7BABAa85eC61Dffe5b520763062e6C29dA27}
+  startBlockNumber: ${IEXEC_START_BLOCK_NUMBER:0}
+  gasPriceMultiplier: ${IEXEC_GAS_PRICE_MULTIPLIER:1.0} # txs will be sent with networkGasPrice*gasPriceMultiplier, 4.0 means super fast
+  gasPriceCap: ${IEXEC_GAS_PRICE_CAP:22000000000} #in Wei, will be used for txs if networkGasPrice*gasPriceMultiplier > gasPriceCap
+  health:
+    pollingIntervalInBlocks: ${IEXEC_CHAIN_HEALTH_POLLING_INTERVAL_IN_BLOCKS:3}
+    outOfServiceThreshold: ${IEXEC_CHAIN_HEALTH_OUT_OF_SERVICE_THRESHOLD:4}
+
+blockchain-adapter:
+  protocol: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PROTOCOL:http}
+  host: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_HOST:localhost}
+  port: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PORT:13010}
+  user:
+    name: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_USERNAME:admin}
+    password: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PASSWORD:whatever}
+
+resultRepository:
+  protocol: ${IEXEC_RESULT_REPOSITORY_PROTOCOL:http}
+  host: ${IEXEC_RESULT_REPOSITORY_HOST:localhost}
+  port: ${IEXEC_RESULT_REPOSITORY_PORT:13200}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # e.g: (spring default is "health, info", use comma for multiple values)
+        # health, info, httptrace
+        # or:
+        # *
+        include: ${IEXEC_WORKER_STANDALONE_MANAGEMENT_ACTUATORS:health, info}
+  endpoint:
+    health:
+      show-details: always  # Show all details of HealthIndicators
+
+logs:
+  purge-rate-in-days: ${IEXEC_LOGS_PURGE_RATE_IN_DAYS:1}
+  availability-period-in-days: ${IEXEC_LOGS_AVAILABILITY_PERIOD_IN_DAYS:3}
+
+springdoc:
+  packagesToScan: com.iexec.standalone
+  pathsToMatch: /**
