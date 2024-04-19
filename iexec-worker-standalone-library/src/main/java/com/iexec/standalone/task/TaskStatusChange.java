@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.task;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.iexec.commons.poco.chain.ChainReceipt;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+import java.util.Date;
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
-
+@Data
+@NoArgsConstructor
+@Builder
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class TaskStatusChange {
+    @Builder.Default
+    private Date date = new Date();
+    private TaskStatus status;
+    @Builder.Default
+    private ChainReceipt chainReceipt = null;
 }

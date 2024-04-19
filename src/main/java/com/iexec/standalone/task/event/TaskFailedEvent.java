@@ -14,20 +14,11 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.task.event;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import lombok.Value;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
-
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
-
+@Value
+public class TaskFailedEvent {
+    String chainTaskId;
 }

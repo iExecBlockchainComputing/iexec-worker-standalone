@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2020 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.worker;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.data.mongodb.repository.MongoRepository;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
+interface WorkerRepository extends MongoRepository<Worker, String> {
 
+    Optional<Worker> findByWalletAddress(String walletAddress);
+
+    List<Worker> findByWalletAddressIn(Collection<String> walletAddresses);
 }

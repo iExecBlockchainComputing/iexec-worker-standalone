@@ -1,5 +1,5 @@
 server:
-  port: ${IEXEC_WORKER_STANDALONE_PORT:13000}
+  port: ${IEXEC_CORE_PORT:13000}
 
 spring:
   data:
@@ -37,9 +37,18 @@ cron:
       reveal: ${REVEAL_TIMEOUT_PERIOD:120000}  # 2m
       result-upload: 30000   # 30s
 
+workers:
+  askForReplicatePeriod: ${IEXEC_ASK_REPLICATE_PERIOD:5000}
+  requiredWorkerVersion: ${IEXEC_CORE_REQUIRED_WORKER_VERSION:} #leave empty will allow any worker version
+  # the whitelist format should be as follow (comma separated on one or multiple lines:
+  # whitelist: ${IEXEC_WHITELIST:address1,
+  #     address2,
+  #     address3}
+  whitelist: ${IEXEC_WORKERS_WHITELIST:}
+
 wallet:
-  encryptedFilePath: ${IEXEC_WORKER_STANDALONE_WALLET_PATH:./src/main/resources/wallet/encrypted-wallet_scheduler.json}
-  password: ${IEXEC_WORKER_STANDALONE_WALLET_PASSWORD:whatever}
+  encryptedFilePath: ${IEXEC_CORE_WALLET_PATH:./src/main/resources/wallet/encrypted-wallet_scheduler.json}
+  password: ${IEXEC_CORE_WALLET_PASSWORD:whatever}
 
 chain:
   privateAddress: ${IEXEC_PRIVATE_CHAIN_ADDRESS:http://localhost:8545}
@@ -52,12 +61,12 @@ chain:
     outOfServiceThreshold: ${IEXEC_CHAIN_HEALTH_OUT_OF_SERVICE_THRESHOLD:4}
 
 blockchain-adapter:
-  protocol: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PROTOCOL:http}
-  host: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_HOST:localhost}
-  port: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PORT:13010}
+  protocol: ${IEXEC_CORE_CHAIN_ADAPTER_PROTOCOL:http}
+  host: ${IEXEC_CORE_CHAIN_ADAPTER_HOST:localhost}
+  port: ${IEXEC_CORE_CHAIN_ADAPTER_PORT:13010}
   user:
-    name: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_USERNAME:admin}
-    password: ${IEXEC_WORKER_STANDALONE_CHAIN_ADAPTER_PASSWORD:whatever}
+    name: ${IEXEC_CORE_CHAIN_ADAPTER_USERNAME:admin}
+    password: ${IEXEC_CORE_CHAIN_ADAPTER_PASSWORD:whatever}
 
 resultRepository:
   protocol: ${IEXEC_RESULT_REPOSITORY_PROTOCOL:http}
@@ -72,7 +81,7 @@ management:
         # health, info, httptrace
         # or:
         # *
-        include: ${IEXEC_WORKER_STANDALONE_MANAGEMENT_ACTUATORS:health, info}
+        include: ${IEXEC_CORE_MANAGEMENT_ACTUATORS:health, info}
   endpoint:
     health:
       show-details: always  # Show all details of HealthIndicators
@@ -82,5 +91,5 @@ logs:
   availability-period-in-days: ${IEXEC_LOGS_AVAILABILITY_PERIOD_IN_DAYS:3}
 
 springdoc:
-  packagesToScan: com.iexec.standalone
+  packagesToScan: com.iexec.core
   pathsToMatch: /**

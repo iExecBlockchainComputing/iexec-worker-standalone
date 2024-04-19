@@ -14,20 +14,23 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.chain;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.iexec.commons.poco.chain.Web3jAbstractService;
+import org.springframework.stereotype.Service;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+@Service
+public class Web3jService extends Web3jAbstractService {
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+    public Web3jService(ChainConfig chainConfig) {
+        super(
+                chainConfig.getChainId(),
+                chainConfig.getPrivateChainAddress(),
+                chainConfig.getBlockTime(),
+                chainConfig.getGasPriceMultiplier(),
+                chainConfig.getGasPriceCap(),
+                chainConfig.isSidechain()
+        );
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2020 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,29 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.configuration;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+import java.math.BigInteger;
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+class Configuration {
+
+    @Id
+    private String id;
+
+    @Version
+    private Long version;
+
+    private BigInteger lastSeenBlockWithDeal;
 
 }

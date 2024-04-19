@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2023-2023 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.api;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.iexec.common.utils.FeignBuilder;
+import feign.Logger;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+public class SchedulerClientBuilder {
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+    private SchedulerClientBuilder() {}
+
+    public static SchedulerClient getInstance(Logger.Level logLevel, String url) {
+        return FeignBuilder.createBuilder(logLevel)
+                .target(SchedulerClient.class, url);
     }
-
 }

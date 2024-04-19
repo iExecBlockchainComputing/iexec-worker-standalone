@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.replicate;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.iexec.common.replicate.ReplicateStatusUpdate;
+import lombok.Builder;
+import lombok.Value;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
-
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
-    }
-
+@Value
+@Builder
+public class ReplicateUpdatedEvent {
+    String chainTaskId;
+    String walletAddress;
+    ReplicateStatusUpdate replicateStatusUpdate;
 }

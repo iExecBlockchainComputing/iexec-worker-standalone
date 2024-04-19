@@ -13,6 +13,7 @@ ext {
     jjwtVersion = '0.11.5'
     mongockVersion = '4.2.7.BETA'
     testContainersVersion = '1.19.0'
+    commonsMathsVersion = '3.6.1'
 }
 
 if (!project.hasProperty('gitBranch')) {
@@ -69,11 +70,53 @@ dependencies {
     implementation "org.springframework.boot:spring-boot-starter-security"
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation "org.springframework.boot:spring-boot-starter-websocket"
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
+    implementation "org.springframework.cloud:spring-cloud-starter-openfeign"
     implementation "org.springframework.retry:spring-retry"
 
     // Spring Doc
     implementation 'org.springdoc:springdoc-openapi-ui:1.7.0'
+
+    // apache commons.lang3
+    implementation 'org.apache.commons:commons-lang3'
+
+    // json web token
+    implementation "io.jsonwebtoken:jjwt-api:$jjwtVersion"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:$jjwtVersion"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:$jjwtVersion"
+
+    // expiring map
+    implementation "net.jodah:expiringmap:0.5.10"
+
+    // ipfs
+    implementation "com.github.ipfs:java-ipfs-http-client:1.2.3"
+
+    // observability
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+    // mongock
+    implementation "com.github.cloudyrock.mongock:mongock-spring-v5:${mongockVersion}"
+    implementation "com.github.cloudyrock.mongock:mongodb-springdata-v2-driver:${mongockVersion}"
+
+    // vavr
+    implementation 'io.vavr:vavr:0.10.4'
+
+    // Apache commons-math3
+    implementation "org.apache.commons:commons-math3:${commonsMathsVersion}"
+
+    // Required for com.iexec.worker.feign.config.RestTemplateConfig
+    implementation 'org.apache.httpcomponents:httpclient'
+
+    implementation 'org.glassfish.jersey.inject:jersey-hk2'
+    implementation 'org.glassfish.jersey.bundles.repackaged:jersey-guava:2.25.1'
+    implementation 'javax.activation:activation:1.1.1'
+
+    // Removes 'warning: unknown enum constant When.MAYBE'
+    implementation 'com.google.code.findbugs:annotations:3.0.1'
+
+    // observability
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
 }
 
 springBoot {
@@ -93,6 +136,7 @@ testing {
             useJUnitJupiter()
             dependencies {
                 implementation 'org.springframework.boot:spring-boot-starter-test'
+                implementation "org.mockito:mockito-inline" // activates mocking final classes/methods
 
                 // awaitility
                 implementation 'org.awaitility:awaitility'

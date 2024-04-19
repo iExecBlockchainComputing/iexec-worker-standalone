@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2020 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone;
+package com.iexec.standalone.chain;
 
-import io.changock.runner.spring.v5.config.EnableChangock;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import com.iexec.common.chain.CredentialsAbstractService;
 
-@EnableChangock
-@SpringBootApplication
-@ConfigurationPropertiesScan
-public class Application {
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+@Service
+public class CredentialsService extends CredentialsAbstractService {
+
+    public CredentialsService(
+            @Value("${wallet.password}") String walletPassword,
+            @Value("${wallet.encryptedFilePath}") String walletPath
+    ) throws Exception {
+        super(walletPassword, walletPath);
     }
-
 }
