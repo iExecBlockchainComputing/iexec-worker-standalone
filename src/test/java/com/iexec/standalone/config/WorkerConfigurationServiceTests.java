@@ -16,38 +16,150 @@
 
 package com.iexec.standalone.config;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+
+@ExtendWith(MockitoExtension.class)
 class WorkerConfigurationServiceTests {
-    
+
     @Mock
+    private Environment environment;
+
+    @InjectMocks
     private WorkerConfigurationService workerConfigService;
 
+    private static final String TASK_NAME = "task1";
+    private static final String HTTP_PROXY_PORT = "http.proxyPort";
+    private static final String HTTPS_PROXY_PORT = "https.proxyPort";
+
     @BeforeEach
-    void beforeEach() {
-        MockitoAnnotations.openMocks(this);
-        workerConfigService = new WorkerConfigurationService();
+    void setUp() {
+        when(environment.getProperty("worker.worker-base-dir")).thenReturn("/base/dir");
+        when(environment.getProperty("worker.name")).thenReturn("worker1");
+        when(environment.getProperty("worker.override-available-cpu-count")).thenReturn("4"); // Default for other tests
     }
-    
+
+    @AfterEach
+    void tearDown() {
+        String[] testedProperties = {
+                "os.name",
+                "os.arch",
+                "http.proxyHost",
+                HTTP_PROXY_PORT,
+                "https.proxyHost",
+                HTTPS_PROXY_PORT };
+        for (String property : testedProperties) {
+            System.clearProperty(property);
+        }
+    }
+
     @Test
-    void shouldReturnIllegalArgumentExceptionIfCPULessThan1() {
-        when(workerConfigService.getCpuCount()).thenReturn("-1");
-        verify(workerConfigService).getCpuCount();
+    void shouldThrowIllegalArgumentExceptionIfCpuCountIsLessThan1() {
+        when(environment.getProperty("worker.override-available-cpu-count")).thenReturn("-1");
         assertThatThrownBy(() -> workerConfigService.postConstruct())
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Override available CPU count must not be less or equal to 0");
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("Override available CPU count must not be less or equal to 0");
     }
 
     @Test
-    void shouldReturnTrueWhenGpuIsEnabled() {
-        when(workerConfigService.getProperty("worker.gpu-enabled")).thenReturn("true");
-        boolean result = workerConfigService.isGpuEnabled();
-        assertThat(result).isTrue();
+    void testIsGpuEnabled() {
+        when(environment.getProperty("worker.gpu-enabled", Boolean.class)).thenReturn(true);
+        assertThat(workerConfigService.isGpuEnabled()).isTrue();
+
+        when(environment.getProperty("worker.gpu-enabled", Boolean.class)).thenReturn(false);
+        assertThat(workerConfigService.isGpuEnabled()).isFalse();
     }
 
     @Test
-    void shouldReturnFalseWhenGpuIsNotEnabled() {
-        when(workerConfigService.getProperty("worker.gpu-enabled")).thenReturn("false");
-        boolean result = workerConfigService.isGpuEnabled();
-        assertThat(result).isFalse();
+    void testGetDirs() {
+        assertThat(workerConfigService.getWorkerBaseDir()).isEqualTo("/base/dir/worker1");
+        assertThat(workerConfigService.getTaskInputDir(TASK_NAME)).isEqualTo("/base/dir/worker1/task1/input");
+        assertThat(workerConfigService.getTaskOutputDir(TASK_NAME)).isEqualTo("/base/dir/worker1/task1/output");
+        assertThat(workerConfigService.getTaskIexecOutDir(TASK_NAME)).isEqualTo("/base/dir/worker1/task1/iexec_out");
+        assertThat(workerConfigService.getTaskBaseDir(TASK_NAME)).isEqualTo("/base/dir/worker1/task1");
     }
 
+    @Test
+    void testGetOS() {
+        String osName = "WorkerOS";
+        System.setProperty("os.name", osName);
+        assertThat(workerConfigService.getOS()).isEqualTo(osName);
+    }
+
+    @Test
+    void testGetCPU() {
+        int workerCpus = 5;
+        System.setProperty("os.arch", Integer.valueOf(workerCpus).toString());
+        assertThat(Integer.valueOf(workerConfigService.getCPU()).intValue()).isEqualTo(workerCpus);
+    }
+
+    @Test
+    void shouldReturnCorrectCpuCount() {
+        int setCpus = 4;
+        when(environment.getProperty("worker.override-available-cpu-count")).thenReturn(setCpus);
+        assertThat(workerConfigService.getCpuCount()).isEqualTo(setCpus);
+
+        when(environment.getProperty("worker.override-available-cpu-count")).thenReturn(null);
+        int availableCpus = Math.max(Runtime.getRuntime().availableProcessors() - 1, 1);
+        assertThat(workerConfigService.getCpuCount()).isEqualTo(availableCpus);
+    }
+
+    @Test
+    void testGetMemorySize() {
+        OperatingSystemMXBean osBean = mock(OperatingSystemMXBean.class);
+        when(osBean.getTotalPhysicalMemorySize()).thenReturn(8L * 1024 * 1024 * 1024); // 8GB
+        when(ManagementFactory.getOperatingSystemMXBean()).thenReturn(osBean);
+        assertThat(workerConfigService.getMemorySize()).isEqualTo(8);
+    }
+
+    @Test
+    void testGetHttpProxyHost() {
+        String httpProxyHost = "httpProxy.worker.com";
+        System.setProperty("http.proxyHost", httpProxyHost);
+        assertThat(workerConfigService.getHttpProxyHost()).isEqualTo(httpProxyHost);
+    }
+
+    @Test
+    void testGetHttpProxyPort() {
+        int httpProxyPort = 8080;
+        System.setProperty(HTTP_PROXY_PORT, Integer.valueOf(httpProxyPort).toString());
+        assertThat(workerConfigService.getHttpProxyPort()).isEqualTo(httpProxyPort);
+    }
+
+    @Test
+    void testGetHttpProxyPortNotDefined() {
+        System.clearProperty(HTTP_PROXY_PORT);
+        assertThat(workerConfigService.getHttpProxyPort()).isNull();
+    }
+
+    @Test
+    void testGetHttpsProxyHost() {
+        String httpsProxyHost = "httpsProxy.worker.com";
+        System.setProperty("https.proxyHost", httpsProxyHost);
+        assertThat(workerConfigService.getHttpsProxyHost()).isEqualTo(httpsProxyHost);
+    }
+
+    @Test
+    void testGetHttpsProxyPort() {
+        int httpsProxyPort = 8008;
+        System.setProperty(HTTPS_PROXY_PORT, Integer.valueOf(httpsProxyPort).toString());
+        assertThat(workerConfigService.getHttpsProxyPort()).isEqualTo(httpsProxyPort);
+    }
+
+    @Test
+    void testGetHttpsProxyPortNotDefined() {
+        System.clearProperty(HTTPS_PROXY_PORT);
+        assertThat(workerConfigService.getHttpsProxyPort()).isNull();
+    }
 }
