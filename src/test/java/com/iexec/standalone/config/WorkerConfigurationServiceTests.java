@@ -17,18 +17,17 @@
 package com.iexec.standalone.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 import java.lang.management.ManagementFactory;
-import java.lang.management.OperatingSystemMXBean;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class WorkerConfigurationServiceTests {
@@ -117,8 +116,8 @@ class WorkerConfigurationServiceTests {
 
     @Test
     void testGetMemorySize() {
-        OperatingSystemMXBean osBean = mock(OperatingSystemMXBean.class);
-        when(osBean.getTotalPhysicalMemorySize()).thenReturn(8L * 1024 * 1024 * 1024); // 8GB
+        com.sun.management.OperatingSystemMXBean osBean = mock(OperatingSystemMXBean.class);
+        when(osBean.getTotalPhysicalMemorySize()).thenReturn(8L * 1024 * 1024 * 1024);
         when(ManagementFactory.getOperatingSystemMXBean()).thenReturn(osBean);
         assertThat(workerConfigService.getMemorySize()).isEqualTo(8);
     }
