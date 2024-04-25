@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### New Features
 
+- Setup dataset-related classes (#5)
 - Setup sgx-related classes. (#4)
 - Setup docker-related classes. (#2, #3)
 - Setup `WorkerConfigurationService`. (#1, #3)
