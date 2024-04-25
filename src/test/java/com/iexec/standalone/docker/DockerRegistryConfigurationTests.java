@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.iexec.worker.docker;
+package com.iexec.standalone.docker;
 
 import org.junit.jupiter.api.Test;
 
