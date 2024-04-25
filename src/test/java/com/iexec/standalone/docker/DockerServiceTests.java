@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.iexec.worker.docker;
+package com.iexec.standalone.docker;
 
 import com.iexec.common.utils.IexecFileHelper;
 import com.iexec.commons.containers.DockerLogs;
@@ -23,7 +23,7 @@ import com.iexec.commons.containers.DockerRunRequest;
 import com.iexec.commons.containers.DockerRunResponse;
 import com.iexec.commons.containers.client.DockerClientFactory;
 import com.iexec.commons.containers.client.DockerClientInstance;
-import com.iexec.worker.config.WorkerConfigurationService;
+import com.iexec.standalone.config.WorkerConfigurationService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
