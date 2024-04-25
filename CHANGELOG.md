@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 ### New Features
 
 - Setup docker-related classes. (#2, #3)
-- Setup WorkerConfigurationService. (#1, #3)
+- Setup `WorkerConfigurationService`. (#1, #3)
 
 ### Quality
 
