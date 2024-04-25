@@ -118,3 +118,7 @@ docker:
     pull-timeout:
       min: ${IEXEC_WORKER_DOCKER_IMAGE_MIN_PULL_TIMEOUT:PT5M}   # image min pull timeout
       max: ${IEXEC_WORKER_DOCKER_IMAGE_MAX_PULL_TIMEOUT:PT30M}  # image max pull timeout
+
+tee:
+  sgx:
+    driver-mode: ${IEXEC_WORKER_SGX_DRIVER_MODE:NONE}
