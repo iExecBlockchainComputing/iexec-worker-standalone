@@ -13,4 +13,6 @@ All notable changes to this project will be documented in this file.
 
 ### Quality
 
+- Add warning in `README.md`. (#6)
+
 ### Dependency Upgrade
