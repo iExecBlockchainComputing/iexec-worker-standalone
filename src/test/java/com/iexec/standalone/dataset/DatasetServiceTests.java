@@ -30,8 +30,10 @@ import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.core.io.FileSystemResource;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 
@@ -86,7 +88,7 @@ class DatasetServiceTests {
     void shouldDownloadStandardTaskDataset() throws Exception {
         final TaskDescription taskDescription = getTaskDescriptionBuilder().build();
         String filepath = dataService.downloadStandardDataset(taskDescription);
-        assertThat(filepath).isEqualTo(iexecIn + "/" + DATASET_ADDRESS);
+        assertThat(filepath).isEqualTo(iexecIn + File.separator + DATASET_ADDRESS);
     }
 
     @Test
@@ -96,7 +98,7 @@ class DatasetServiceTests {
                 .build();
         final URL resourceFile = this.getClass().getClassLoader().getResource(DATASET_RESOURCE_NAME);
         assertThat(resourceFile).isNotNull();
-        when(dataService.downloadFile(anyString(), anyString(), anyString(), anyString())).thenReturn(resourceFile.getFile());
+        when(dataService.downloadFile(anyString(), anyString(), anyString(), anyString())).thenReturn(new FileSystemResource(resourceFile.getFile()).getFile().getPath().replace("%20", " "));
         final String filepath = dataService.downloadStandardDataset(taskDescription);
         assertThat(filepath).isNotEmpty();
         assertThat(output)
@@ -106,7 +108,7 @@ class DatasetServiceTests {
     }
 
     @Test
-    void shouldDownloadStandardDatasetFromIpfsGateway(CapturedOutput output) throws WorkflowException {
+    void shouldDownloadStandardDatasetFromIpfsGateway(CapturedOutput output) throws WorkflowException, URISyntaxException {
         final TaskDescription taskDescription = getTaskDescriptionBuilder()
                 .datasetUri(IPFS_URI)
                 .build();
@@ -114,7 +116,7 @@ class DatasetServiceTests {
         assertThat(resourceFile).isNotNull();
         when(dataService.downloadFile(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn("")
-                .thenReturn(resourceFile.getFile());
+                .thenReturn(new FileSystemResource(resourceFile.getFile()).getFile().getPath().replace("%20", " "));
         final String filepath = dataService.downloadStandardDataset(taskDescription);
         assertThat(filepath).isNotEmpty();
         assertThat(output)
@@ -133,7 +135,7 @@ class DatasetServiceTests {
         when(dataService.downloadFile(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn("")
                 .thenReturn("")
-                .thenReturn(resourceFile.getFile());
+                .thenReturn(new FileSystemResource(resourceFile.getFile()).getFile().getPath().replace("%20", " "));
         final String filepath = dataService.downloadStandardDataset(taskDescription);
         assertThat(filepath).isNotEmpty();
         assertThat(output)
@@ -227,7 +229,7 @@ class DatasetServiceTests {
                 .datasetChecksum("")
                 .build();
         assertThat(dataService.downloadStandardDataset(taskDescription))
-                .isEqualTo(iexecIn + "/" + DATASET_ADDRESS);
+                .isEqualTo(iexecIn + File.separator + DATASET_ADDRESS);
     }
 
     @Test

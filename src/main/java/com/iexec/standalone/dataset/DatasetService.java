@@ -24,12 +24,14 @@ import com.iexec.commons.poco.task.TaskDescription;
 import com.iexec.commons.poco.utils.MultiAddressHelper;
 import com.iexec.standalone.config.WorkerConfigurationService;
 import com.iexec.standalone.utils.WorkflowException;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 import java.io.File;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -99,11 +101,13 @@ public class DatasetService {
      * @param uriList List of input files to download
      * @throws WorkflowException if download fails.
      */
+    @SneakyThrows
     public void downloadStandardInputFiles(String chainTaskId, @Nonnull List<String> uriList)
             throws WorkflowException {
         for (String uri: uriList) {
+            final String[] pathParts = new URL(uri).getPath().split("[/\\\\]");
             String filename = !StringUtils.isEmpty(uri)
-                    ? Paths.get(uri).getFileName().toString()
+                    ? pathParts[pathParts.length - 1]
                     : "";
             String parenDirectoryPath = workerConfigurationService.getTaskInputDir(chainTaskId);
             if (downloadFile(chainTaskId, uri, parenDirectoryPath, filename).isEmpty()) {
