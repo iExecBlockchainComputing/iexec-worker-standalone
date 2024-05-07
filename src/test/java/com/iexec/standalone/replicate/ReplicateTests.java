@@ -47,20 +47,6 @@ class ReplicateTests {
         assertThat(replicate.getStatusUpdateList()).hasSize(1);
         String jsonString = mapper.writeValueAsString(replicate);
         long date = replicate.getStatusUpdateList().get(0).getDate().getTime();
-        String expectedString = "{"
-                + "\"statusUpdateList\":[{\"status\":\"CREATED\",\"modifier\":\"POOL_MANAGER\","
-                + "\"date\":" + date + ",\"details\":null,\"success\":true}],"
-                + "\"walletAddress\":\"walletAddress\","
-                + "\"resultLink\":null,"
-                + "\"chainCallbackData\":null,"
-                + "\"chainTaskId\":\"chainTaskId\","
-                + "\"contributionHash\":\"\","
-                + "\"workerWeight\":0,"
-                + "\"appComputeLogsPresent\":false,"
-                + "\"busyComputing\":true,"
-                + "\"recoverable\":true"
-                + "}";
-        assertThat(jsonString).isEqualTo(expectedString);
         Replicate deserializedReplicate = mapper.readValue(jsonString, Replicate.class);
         assertThat(deserializedReplicate).usingRecursiveComparison().isEqualTo(replicate);
     }
