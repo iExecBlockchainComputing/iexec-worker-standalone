@@ -19,6 +19,7 @@ package com.iexec.standalone.chain;
 import com.iexec.common.chain.CredentialsAbstractService;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,5 +30,10 @@ public class CredentialsService extends CredentialsAbstractService {
             @Value("${wallet.encryptedFilePath}") String walletPath
     ) throws Exception {
         super(walletPassword, walletPath);
+    }
+
+    @Bean
+    public String workerWalletAddress() {
+        return getCredentials().getAddress();
     }
 }
