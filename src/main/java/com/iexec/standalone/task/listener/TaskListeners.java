@@ -17,10 +17,10 @@
 package com.iexec.standalone.task.listener;
 
 import com.iexec.common.lifecycle.purge.PurgeService;
-import com.iexec.commons.poco.notification.TaskNotification;
-import com.iexec.commons.poco.notification.TaskNotificationExtra;
-import com.iexec.commons.poco.notification.TaskNotificationType;
 import com.iexec.commons.poco.task.TaskAbortCause;
+import com.iexec.standalone.notification.TaskNotification;
+import com.iexec.standalone.notification.TaskNotificationExtra;
+import com.iexec.standalone.notification.TaskNotificationType;
 import com.iexec.standalone.pubsub.NotificationService;
 import com.iexec.standalone.replicate.Replicate;
 import com.iexec.standalone.replicate.ReplicatesService;
