@@ -14,5 +14,6 @@ All notable changes to this project will be documented in this file.
 ### Quality
 
 - Add warning in `README.md`. (#6)
+- Update base code to match new Scheduler version. (#8)
 
 ### Dependency Upgrade

@@ -37,7 +37,7 @@ public class PublicConfigurationService {
     private final CredentialsService credentialsService;
     private final WorkerConfiguration workerConfiguration;
     private final ResultRepositoryConfiguration resultRepoConfig;
-    private final BlockchainAdapterClientConfig blockchainAdapterClientConfig;
+    private final ConfigServerClientConfig configServerClientConfig;
 
     private PublicConfiguration publicConfiguration = null;
     /**
@@ -51,19 +51,20 @@ public class PublicConfigurationService {
                                       CredentialsService credentialsService,
                                       WorkerConfiguration workerConfiguration,
                                       ResultRepositoryConfiguration resultRepoConfig,
-                                      BlockchainAdapterClientConfig blockchainAdapterClientConfig) {
+                                      ConfigServerClientConfig configServerClientConfig) {
         this.chainConfig = chainConfig;
         this.credentialsService = credentialsService;
         this.workerConfiguration = workerConfiguration;
         this.resultRepoConfig = resultRepoConfig;
-        this.blockchainAdapterClientConfig = blockchainAdapterClientConfig;
+        this.configServerClientConfig = configServerClientConfig;
     }
 
     @PostConstruct
     void buildPublicConfiguration() {
         this.publicConfiguration = PublicConfiguration.builder()
                 .workerPoolAddress(chainConfig.getPoolAddress())
-                .blockchainAdapterUrl(blockchainAdapterClientConfig.getUrl())
+                .blockchainAdapterUrl(configServerClientConfig.getUrl())
+                .configServerUrl(configServerClientConfig.getUrl())
                 .schedulerPublicAddress(credentialsService.getCredentials().getAddress())
                 .resultRepositoryURL(resultRepoConfig.getResultRepositoryURL())
                 .askForReplicatePeriod(workerConfiguration.getAskForReplicatePeriod())

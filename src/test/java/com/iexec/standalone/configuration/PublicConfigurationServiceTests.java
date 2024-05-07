@@ -41,7 +41,7 @@ class PublicConfigurationServiceTests {
     @Mock
     private ResultRepositoryConfiguration resultRepoConfig;
     @Mock
-    private BlockchainAdapterClientConfig blockchainAdapterClientConfig;
+    private ConfigServerClientConfig configServerClientConfig;
 
     @InjectMocks
     private PublicConfigurationService publicConfigurationService;
