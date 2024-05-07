@@ -16,7 +16,7 @@
 
 package com.iexec.standalone.pubsub;
 
-import com.iexec.commons.poco.notification.TaskNotification;
+import com.iexec.standalone.notification.TaskNotification;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;

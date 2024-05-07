@@ -16,11 +16,11 @@
 
 package com.iexec.standalone.worker;
 
-import com.iexec.common.config.PublicConfiguration;
 import com.iexec.common.config.WorkerModel;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.SignatureUtils;
+import com.iexec.standalone.config.PublicConfiguration;
 import com.iexec.standalone.configuration.PublicConfigurationService;
 import com.iexec.standalone.security.ChallengeService;
 import com.iexec.standalone.security.JwtTokenProvider;

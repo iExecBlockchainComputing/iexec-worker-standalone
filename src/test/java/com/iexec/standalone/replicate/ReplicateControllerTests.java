@@ -18,9 +18,9 @@ package com.iexec.standalone.replicate;
 
 import com.iexec.common.replicate.*;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
-import com.iexec.commons.poco.notification.TaskNotification;
-import com.iexec.commons.poco.notification.TaskNotificationType;
 import com.iexec.standalone.chain.BlockchainConnectionHealthIndicator;
+import com.iexec.standalone.notification.TaskNotification;
+import com.iexec.standalone.notification.TaskNotificationType;
 import com.iexec.standalone.security.JwtTokenProvider;
 import com.iexec.standalone.worker.WorkerService;
 import io.vavr.control.Either;

@@ -22,16 +22,16 @@ import com.iexec.common.replicate.ComputeLogs;
 import com.iexec.common.replicate.ReplicateStatusUpdate;
 import com.iexec.common.replicate.ReplicateTaskSummary;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
-import com.iexec.commons.poco.notification.TaskNotification;
-import com.iexec.commons.poco.notification.TaskNotificationType;
+import com.iexec.commons.poco.security.Signature;
 import com.iexec.standalone.logs.TaskLogsModel;
 import com.iexec.standalone.metric.PlatformMetric;
+import com.iexec.standalone.notification.TaskNotification;
+import com.iexec.standalone.notification.TaskNotificationType;
 import com.iexec.standalone.task.TaskModel;
 import feign.Headers;
 import feign.Param;
 import feign.RequestLine;
 
-import java.security.Signature;
 import java.util.List;
 
 public interface SchedulerClient {

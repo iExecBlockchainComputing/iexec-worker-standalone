@@ -18,8 +18,8 @@ package com.iexec.standalone.workflow;
 
 import com.iexec.common.replicate.ReplicateStatus;
 import com.iexec.common.replicate.ReplicateStatusCause;
-import com.iexec.commons.poco.notification.TaskNotificationType;
 import com.iexec.commons.poco.task.TaskDescription;
+import com.iexec.standalone.notification.TaskNotificationType;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Arrays;
@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 import static com.iexec.common.replicate.ReplicateStatus.*;
-import static com.iexec.commons.poco.notification.TaskNotificationType.*;
+import static com.iexec.standalone.notification.TaskNotificationType.*;
 
 @Slf4j
 public class ReplicateWorkflow extends Workflow<ReplicateStatus> {

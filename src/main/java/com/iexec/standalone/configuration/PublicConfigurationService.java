@@ -16,10 +16,9 @@
 
 package com.iexec.standalone.configuration;
 
-import com.iexec.common.config.PublicConfiguration;
 import com.iexec.standalone.chain.ChainConfig;
 import com.iexec.standalone.chain.CredentialsService;
-import com.iexec.standalone.chain.adapter.BlockchainAdapterClientConfig;
+import com.iexec.standalone.config.PublicConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.web3j.crypto.Hash;
