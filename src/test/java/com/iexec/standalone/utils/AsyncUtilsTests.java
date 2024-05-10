@@ -30,7 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class AsyncUtilsTest {
+class AsyncUtilsTests {
 
     @Mock
     private Executor mockExecutor;
