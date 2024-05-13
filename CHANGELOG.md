@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 
 ### New Features
 
+- Setup utils-related classes (#11)
 - Setup dataset-related classes (#5, #7)
 - Setup sgx-related classes. (#4, #10)
 - Setup docker-related classes. (#2, #3)

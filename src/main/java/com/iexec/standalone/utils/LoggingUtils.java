@@ -16,7 +16,6 @@
 
 package com.iexec.standalone.utils;
 
-
 public class LoggingUtils {
 
     public static String getHighlightedMessage(String message) {
@@ -67,6 +66,5 @@ public class LoggingUtils {
                 "#################### DEV MODE ####################\n" +
                 "\n";
     }
-
 
 }
