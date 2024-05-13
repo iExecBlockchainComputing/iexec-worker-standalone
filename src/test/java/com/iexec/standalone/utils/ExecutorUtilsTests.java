@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ExecutorUtilsTest {
+class ExecutorUtilsTests {
 
     final String THREAD_NAME_PREFIX = "testExecutorUtils-";
 
