@@ -26,6 +26,7 @@ build
 /.nb-gradle/
 
 /bin/
+/iexec-worker-standalone-library/bin/
 .vscode/
 .env
 .dockerignore
