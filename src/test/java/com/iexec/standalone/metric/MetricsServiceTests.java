@@ -172,6 +172,9 @@ class MetricsServiceTests {
                 new AggregatedDurations(2, 6_000.0, 7_500.0, 6_750.0)
         );
 
+        System.out.println(workerMetrics);
+        System.out.println("-----");
+        System.out.println(expectedWorkerMetrics);
         assertThat(workerMetrics).isEqualTo(expectedWorkerMetrics);
     }
     // endregion
@@ -205,14 +208,22 @@ class MetricsServiceTests {
         when(appComputeDurationsService.getChainTaskIds()).thenReturn(List.of(CHAIN_TASK_ID_1, CHAIN_TASK_ID_2));
 
         // First task has completed
+        System.out.println("Task 1 :" + CHAIN_TASK_ID_1);
         when(preComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1)).thenReturn(Optional.of(1_000L));
+        System.out.println(preComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1));
         when(appComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1)).thenReturn(Optional.of(3_000L));
+        System.out.println(appComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1));
         when(postComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1)).thenReturn(Optional.of(2_000L));
+        System.out.println(postComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_1));
 
         // Second task has completed
+        System.out.println("Task 2 :" + CHAIN_TASK_ID_2);
         when(preComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2)).thenReturn(Optional.of(1_500L));
+        System.out.println(preComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2));
         when(appComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2)).thenReturn(Optional.of(3_500L));
+        System.out.println(appComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2));
         when(postComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2)).thenReturn(Optional.of(2_500L));
+        System.out.println(postComputeDurationsService.getDurationForTask(CHAIN_TASK_ID_2));
 
         final List<Double> completeComputeDurations = metricsService.getCompleteComputeDurations();
 
