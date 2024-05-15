@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone.chain;
+package com.iexec.standalone.utils;
 
 public class ContributionUtils {
 
