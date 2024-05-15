@@ -19,7 +19,9 @@ package com.iexec.standalone.chain;
 import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.contract.generated.IexecHubContract;
 import com.iexec.commons.poco.utils.BytesUtils;
+import com.iexec.standalone.config.BlockchainAdapterConfigurationService;
 import io.reactivex.Flowable;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,9 +31,14 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.web3j.crypto.Credentials;
+import org.web3j.crypto.Hash;
 import org.web3j.crypto.Keys;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.methods.response.Log;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
@@ -44,58 +51,74 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@Slf4j
 class IexecHubServiceTests {
 
     private static final String TRANSACTION_HASH = "transactionHash";
     private static final long TIME_INTERVAL_IN_MS = 100L;
+    private static final String TASK_CONTRIBUTE_NOTICE = Hash.sha3String("TaskContribute(bytes32,address,bytes32)");
+    private static final String TASK_REVEAL_NOTICE = Hash.sha3String("TaskReveal(bytes32,address,bytes32)");
+    private static final String TASK_FINALIZE_NOTICE = Hash.sha3String("TaskFinalize(bytes32,bytes)");
+    private static final String CHAIN_TASK_ID = "0x5125c4ca7176e40d8c5386072a6f262029609a5d3a896fbf592cd965e65098d9";
 
+    @Mock
+    private BlockchainAdapterConfigurationService blockchainAdapterConfigurationService;
     @Mock
     private CredentialsService credentialsService;
-
     @Mock
     private Web3jService web3jService;
-
+    @Mock
+    private IexecHubContract iexecHubContract;
+    @Mock
+    private RemoteFunctionCall<TransactionReceipt> remoteFunctionCall;
     @Mock
     private ChainConfig chainConfig;
+    @Mock
+    private Web3j web3jClient;
 
-    private IexecHubService iexecHubService;
+    private IexecHubService chainConfigIexecHubService;
+    private IexecHubService BACSIexecHubService;
+    private Credentials credentials;
 
     @BeforeEach
     void init() throws Exception {
         MockitoAnnotations.openMocks(this);
-
-        final Credentials credentials = Credentials.create(Keys.createEcKeyPair());
-
+        when(blockchainAdapterConfigurationService.getIexecHubContractAddress()).thenReturn("0x748e091bf16048cb5103E0E10F9D5a8b7fBDd860");
+        when(blockchainAdapterConfigurationService.getBlockTime()).thenReturn(Duration.ofSeconds(5L));
+        when(blockchainAdapterConfigurationService.getChainId()).thenReturn(65535);
+        credentials = Credentials.create(Keys.createEcKeyPair());
         when(credentialsService.getCredentials()).thenReturn(credentials);
         when(web3jService.hasEnoughGas(any())).thenReturn(true);
         when(chainConfig.getHubAddress()).thenReturn("0x748e091bf16048cb5103E0E10F9D5a8b7fBDd860");
-
-        iexecHubService = spy(new IexecHubService(credentialsService, web3jService, chainConfig));
+        when(web3jService.getWeb3j()).thenReturn(web3jClient);
+        chainConfigIexecHubService = spy(new IexecHubService(credentialsService, web3jService, chainConfig));
+        BACSIexecHubService = spy(new IexecHubService(credentialsService, web3jService, blockchainAdapterConfigurationService));
+        ReflectionTestUtils.setField(BACSIexecHubService, "iexecHubContract", iexecHubContract);
     }
 
     // region isTaskInCompletedStatusOnChain
     @Test
     void shouldTaskBeInCompletedStatusOnChain() {
         final ChainTask task = ChainTask.builder().status(ChainTaskStatus.COMPLETED).build();
-        doReturn(Optional.of(task)).when(iexecHubService).getChainTask(CHAIN_TASK_ID);
+        doReturn(Optional.of(task)).when(chainConfigIexecHubService).getChainTask(CHAIN_TASK_ID);
 
-        assertThat(iexecHubService.isTaskInCompletedStatusOnChain(CHAIN_TASK_ID)).isTrue();
+        assertThat(chainConfigIexecHubService.isTaskInCompletedStatusOnChain(CHAIN_TASK_ID)).isTrue();
     }
 
     @Test
     void shouldTaskNotBeInCompletedStatusOnChain() {
         final ChainTask task = ChainTask.builder().status(ChainTaskStatus.REVEALING).build();
-        doReturn(Optional.of(task)).when(iexecHubService).getChainTask(CHAIN_TASK_ID);
+        doReturn(Optional.of(task)).when(chainConfigIexecHubService).getChainTask(CHAIN_TASK_ID);
 
-        assertThat(iexecHubService.isTaskInCompletedStatusOnChain(CHAIN_TASK_ID)).isFalse();
+        assertThat(chainConfigIexecHubService.isTaskInCompletedStatusOnChain(CHAIN_TASK_ID)).isFalse();
     }
     // endregion
 
     // region canFinalize
     @Test
     void canNotFinalizeWhenChainTaskNotFound() {
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.empty());
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.empty());
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -104,8 +127,8 @@ class IexecHubServiceTests {
                 .status(ChainTaskStatus.ACTIVE)
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -114,8 +137,8 @@ class IexecHubServiceTests {
                 .status(ChainTaskStatus.REVEALING)
                 .finalDeadline(Instant.now().minus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -127,8 +150,8 @@ class IexecHubServiceTests {
                 .revealDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -140,8 +163,8 @@ class IexecHubServiceTests {
                 .revealDeadline(Instant.now().minus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isTrue();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isTrue();
     }
 
     @Test
@@ -153,16 +176,16 @@ class IexecHubServiceTests {
                 .revealDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canFinalize(CHAIN_TASK_ID)).isTrue();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canFinalize(CHAIN_TASK_ID)).isTrue();
     }
     // endregion
 
     // region canReopen
     @Test
     void canNotRepoenWhenChainTaskNotFound() {
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.empty());
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.empty());
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -171,8 +194,8 @@ class IexecHubServiceTests {
                 .status(ChainTaskStatus.ACTIVE)
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -181,8 +204,8 @@ class IexecHubServiceTests {
                 .status(ChainTaskStatus.REVEALING)
                 .finalDeadline(Instant.now().minus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -192,8 +215,8 @@ class IexecHubServiceTests {
                 .revealDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -203,8 +226,8 @@ class IexecHubServiceTests {
                 .revealCounter(1)
                 .finalDeadline(Instant.now().minus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isFalse();
     }
 
     @Test
@@ -214,8 +237,8 @@ class IexecHubServiceTests {
                 .revealDeadline(Instant.now().minus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .finalDeadline(Instant.now().plus(TIME_INTERVAL_IN_MS, ChronoUnit.MILLIS).toEpochMilli())
                 .build();
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
-        assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isTrue();
+        when(chainConfigIexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(chainTask));
+        assertThat(chainConfigIexecHubService.canReopen(CHAIN_TASK_ID)).isTrue();
     }
     // endregion
 
@@ -224,16 +247,16 @@ class IexecHubServiceTests {
     @EnumSource(value = ChainContributionStatus.class, mode = EnumSource.Mode.INCLUDE, names = {"CONTRIBUTED", "REVEALED"})
     void shouldBeContributed(ChainContributionStatus status) {
         final ChainContribution chainContribution = ChainContribution.builder().status(status).build();
-        when(iexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
-        assertThat(iexecHubService.isContributed(CHAIN_TASK_ID, WORKER_ADDRESS)).isTrue();
+        when(chainConfigIexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
+        assertThat(chainConfigIexecHubService.isContributed(CHAIN_TASK_ID, WORKER_ADDRESS)).isTrue();
     }
 
     @ParameterizedTest
     @EnumSource(value = ChainContributionStatus.class, mode = EnumSource.Mode.EXCLUDE, names = {"CONTRIBUTED", "REVEALED"})
     void shouldNotBeContributed(ChainContributionStatus status) {
         final ChainContribution chainContribution = ChainContribution.builder().status(status).build();
-        when(iexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
-        assertThat(iexecHubService.isContributed(CHAIN_TASK_ID, WORKER_ADDRESS)).isFalse();
+        when(chainConfigIexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
+        assertThat(chainConfigIexecHubService.isContributed(CHAIN_TASK_ID, WORKER_ADDRESS)).isFalse();
     }
     // endregion
 
@@ -242,16 +265,16 @@ class IexecHubServiceTests {
     @EnumSource(value = ChainContributionStatus.class, mode = EnumSource.Mode.INCLUDE, names = {"REVEALED"})
     void shouldBeRevealed(ChainContributionStatus status) {
         final ChainContribution chainContribution = ChainContribution.builder().status(status).build();
-        when(iexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
-        assertThat(iexecHubService.isRevealed(CHAIN_TASK_ID, WORKER_ADDRESS)).isTrue();
+        when(chainConfigIexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
+        assertThat(chainConfigIexecHubService.isRevealed(CHAIN_TASK_ID, WORKER_ADDRESS)).isTrue();
     }
 
     @ParameterizedTest
     @EnumSource(value = ChainContributionStatus.class, mode = EnumSource.Mode.EXCLUDE, names = {"REVEALED"})
     void shouldNotBeRevealed(ChainContributionStatus status) {
         final ChainContribution chainContribution = ChainContribution.builder().status(status).build();
-        when(iexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
-        assertThat(iexecHubService.isRevealed(CHAIN_TASK_ID, WORKER_ADDRESS)).isFalse();
+        when(chainConfigIexecHubService.getChainContribution(anyString(), anyString())).thenReturn(Optional.of(chainContribution));
+        assertThat(chainConfigIexecHubService.isRevealed(CHAIN_TASK_ID, WORKER_ADDRESS)).isFalse();
     }
     // endregion
 
@@ -263,13 +286,13 @@ class IexecHubServiceTests {
         when(web3jService.getLatestBlockNumber()).thenReturn(latestBlock);
 
         final IexecHubContract hubContract = mock(IexecHubContract.class);
-        ReflectionTestUtils.setField(iexecHubService, "iexecHubContract", hubContract);
+        ReflectionTestUtils.setField(chainConfigIexecHubService, "iexecHubContract", hubContract);
 
         final IexecHubContract.TaskContributeEventResponse taskContributeEventResponse = getTaskContributeEventResponse(latestBlock);
         when(hubContract.taskContributeEventFlowable(any()))
                 .thenReturn(Flowable.fromArray(taskContributeEventResponse));
 
-        final ChainReceipt chainReceipt = iexecHubService.getContributionBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock);
+        final ChainReceipt chainReceipt = chainConfigIexecHubService.getContributionBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock);
 
         assertThat(chainReceipt)
                 .isEqualTo(ChainReceipt.builder()
@@ -296,13 +319,13 @@ class IexecHubServiceTests {
         when(web3jService.getLatestBlockNumber()).thenReturn(latestBlock);
 
         final IexecHubContract hubContract = mock(IexecHubContract.class);
-        ReflectionTestUtils.setField(iexecHubService, "iexecHubContract", hubContract);
+        ReflectionTestUtils.setField(chainConfigIexecHubService, "iexecHubContract", hubContract);
 
         final IexecHubContract.TaskConsensusEventResponse taskConsensusEventResponse = getTaskConsensusEventResponse(latestBlock);
         when(hubContract.taskConsensusEventFlowable(any()))
                 .thenReturn(Flowable.fromArray(taskConsensusEventResponse));
 
-        final ChainReceipt chainReceipt = iexecHubService.getConsensusBlock(CHAIN_TASK_ID, fromBlock);
+        final ChainReceipt chainReceipt = chainConfigIexecHubService.getConsensusBlock(CHAIN_TASK_ID, fromBlock);
 
         assertThat(chainReceipt)
                 .isEqualTo(ChainReceipt.builder()
@@ -328,13 +351,13 @@ class IexecHubServiceTests {
         when(web3jService.getLatestBlockNumber()).thenReturn(latestBlock);
 
         final IexecHubContract hubContract = mock(IexecHubContract.class);
-        ReflectionTestUtils.setField(iexecHubService, "iexecHubContract", hubContract);
+        ReflectionTestUtils.setField(chainConfigIexecHubService, "iexecHubContract", hubContract);
 
         final IexecHubContract.TaskRevealEventResponse taskRevealEventResponse = getTaskRevealEventResponse(latestBlock);
         when(hubContract.taskRevealEventFlowable(any()))
                 .thenReturn(Flowable.fromArray(taskRevealEventResponse));
 
-        final ChainReceipt chainReceipt = iexecHubService.getRevealBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock);
+        final ChainReceipt chainReceipt = chainConfigIexecHubService.getRevealBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock);
 
         assertThat(chainReceipt)
                 .isEqualTo(ChainReceipt.builder()
@@ -361,13 +384,13 @@ class IexecHubServiceTests {
         when(web3jService.getLatestBlockNumber()).thenReturn(latestBlock);
 
         final IexecHubContract hubContract = mock(IexecHubContract.class);
-        ReflectionTestUtils.setField(iexecHubService, "iexecHubContract", hubContract);
+        ReflectionTestUtils.setField(chainConfigIexecHubService, "iexecHubContract", hubContract);
 
         final IexecHubContract.TaskFinalizeEventResponse taskFinalizeEventResponse = getTaskFinalizeEventResponse(latestBlock);
         when(hubContract.taskFinalizeEventFlowable(any()))
                 .thenReturn(Flowable.fromArray(taskFinalizeEventResponse));
 
-        final ChainReceipt chainReceipt = iexecHubService.getFinalizeBlock(CHAIN_TASK_ID, fromBlock);
+        final ChainReceipt chainReceipt = chainConfigIexecHubService.getFinalizeBlock(CHAIN_TASK_ID, fromBlock);
 
         assertThat(chainReceipt)
                 .isEqualTo(ChainReceipt.builder()
@@ -388,10 +411,10 @@ class IexecHubServiceTests {
 
     static Stream<BiFunction<IexecHubService, Long, ChainReceipt>> eventBlockGetters() {
         return Stream.of(
-                (iexecHubService, fromBlock) -> iexecHubService.getContributionBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock),
-                (iexecHubService, fromBlock) -> iexecHubService.getConsensusBlock(CHAIN_TASK_ID, fromBlock),
-                (iexecHubService, fromBlock) -> iexecHubService.getRevealBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock),
-                (iexecHubService, fromBlock) -> iexecHubService.getFinalizeBlock(CHAIN_TASK_ID, fromBlock)
+                (chainConfigIexecHubService, fromBlock) -> chainConfigIexecHubService.getContributionBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock),
+                (chainConfigIexecHubService, fromBlock) -> chainConfigIexecHubService.getConsensusBlock(CHAIN_TASK_ID, fromBlock),
+                (chainConfigIexecHubService, fromBlock) -> chainConfigIexecHubService.getRevealBlock(CHAIN_TASK_ID, WORKER_ADDRESS, fromBlock),
+                (chainConfigIexecHubService, fromBlock) -> chainConfigIexecHubService.getFinalizeBlock(CHAIN_TASK_ID, fromBlock)
         );
     }
 
@@ -402,7 +425,7 @@ class IexecHubServiceTests {
         final long latestBlock = 1;
         when(web3jService.getLatestBlockNumber()).thenReturn(latestBlock);
 
-        final ChainReceipt chainReceipt = eventBlockGetter.apply(iexecHubService, fromBlock);
+        final ChainReceipt chainReceipt = eventBlockGetter.apply(chainConfigIexecHubService, fromBlock);
         assertThat(chainReceipt)
                 .isEqualTo(ChainReceipt.builder().build());
     }
