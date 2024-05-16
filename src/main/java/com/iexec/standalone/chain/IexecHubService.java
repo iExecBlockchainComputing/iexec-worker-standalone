@@ -21,11 +21,9 @@ import com.iexec.common.lifecycle.purge.Purgeable;
 import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.contract.generated.IexecHubContract;
 import com.iexec.commons.poco.utils.BytesUtils;
-import com.iexec.standalone.config.BlockchainAdapterConfigurationService;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.datatypes.Event;
@@ -73,20 +71,6 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
         if (!hasEnoughGas()) {
             System.exit(0);
         }
-    }
-
-    @Autowired
-    public IexecHubService(CredentialsService credentialsService,
-                           Web3jService web3jService,
-                           BlockchainAdapterConfigurationService blockchainAdapterConfigurationService) {
-        super(credentialsService.getCredentials(),
-                web3jService,
-                blockchainAdapterConfigurationService.getIexecHubContractAddress(),
-                1,
-                5);
-        this.credentialsService = credentialsService;
-        this.web3jService = web3jService;
-        this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     }
 
     /**
