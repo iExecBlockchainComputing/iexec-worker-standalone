@@ -6,12 +6,12 @@ All notable changes to this project will be documented in this file.
 
 ### New Features
 
-- Setup metric-related classes (#12)
-- Setup utils-related classes (#11)
-- Setup dataset-related classes (#5, #7)
-- Setup sgx-related classes. (#4, #10)
-- Setup docker-related classes. (#2, #3)
 - Setup `WorkerConfigurationService`. (#1, #3, #7)
+- Setup docker-related classes. (#2, #3)
+- Setup sgx-related classes. (#4, #10)
+- Setup dataset-related classes (#5, #7)
+- Setup utils-related classes (#11)
+- Setup metric-related classes (#12)
 
 ### Quality
 
