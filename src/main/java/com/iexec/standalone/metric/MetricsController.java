@@ -18,22 +18,28 @@ package com.iexec.standalone.metric;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import static org.springframework.http.ResponseEntity.ok;
 
 @RestController
-public class MetricController {
+@RequestMapping("/metrics")
+public class MetricsController {
 
-    private final MetricService metricService;
+    private final MetricsService metricsService;
 
-    public MetricController(MetricService metricService) {
-        this.metricService = metricService;
+    public MetricsController(MetricsService metricService) {
+        this.metricsService = metricService;
     }
 
-    @GetMapping("/metrics")
+    @GetMapping
     public ResponseEntity<PlatformMetric> getPlatformMetric() {
-        return ok(metricService.getPlatformMetrics());
+        return ok(metricsService.getPlatformMetrics());
     }
 
+    @GetMapping
+    public ResponseEntity<WorkerMetrics> getWorkerMetrics() {
+        return ok(metricsService.getWorkerMetrics());
+    }
 }
