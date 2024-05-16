@@ -30,30 +30,28 @@ import static org.mockito.Mockito.when;
 
 class Web3jServiceTests {
     @Mock
-    private BlockchainAdapterConfigurationService blockchainAdapterConfigurationService;
-    @Mock
-    private WorkerConfigurationService workerConfigurationService;
+    private ChainConfig chainConfig;
 
     @BeforeEach
     void init() {
         MockitoAnnotations.openMocks(this);
-        when(blockchainAdapterConfigurationService.getChainId()).thenReturn(134);
-        when(blockchainAdapterConfigurationService.getBlockTime()).thenReturn(Duration.ofSeconds(5));
-        when(blockchainAdapterConfigurationService.isSidechain()).thenReturn(true);
-        when(blockchainAdapterConfigurationService.getChainNodeUrl()).thenReturn("https://bellecour.iex.ec");
-        when(workerConfigurationService.getGasPriceMultiplier()).thenReturn(1.0f);
-        when(workerConfigurationService.getGasPriceCap()).thenReturn(22_000_000_000L);
+        when(chainConfig.getChainId()).thenReturn(134);
+        when(chainConfig.getBlockTime()).thenReturn(Duration.ofSeconds(5));
+        when(chainConfig.isSidechain()).thenReturn(true);
+        when(chainConfig.getPrivateChainAddress()).thenReturn("https://bellecour.iex.ec");
+        when(chainConfig.getGasPriceMultiplier()).thenReturn(1.0f);
+        when(chainConfig.getGasPriceCap()).thenReturn(22_000_000_000L);
     }
 
     @Test
     void shouldCreateInstanceWithDefaultNodeAddress() {
-        when(workerConfigurationService.getOverrideBlockchainNodeAddress()).thenReturn("");
-        assertThat(new Web3jService(blockchainAdapterConfigurationService, workerConfigurationService)).isNotNull();
+        when(chainConfig.getPrivateChainAddress()).thenReturn("");
+        assertThat(new Web3jService(chainConfig)).isNotNull();
     }
 
     @Test
     void shouldCreateInstanceWithOverridenNodeAddress() {
-        when(workerConfigurationService.getOverrideBlockchainNodeAddress()).thenReturn("http://localhost:8545");
-        assertThat(new Web3jService(blockchainAdapterConfigurationService, workerConfigurationService)).isNotNull();
+        when(chainConfig.getPrivateChainAddress()).thenReturn("http://localhost:8545");
+        assertThat(new Web3jService(chainConfig)).isNotNull();
     }
 }

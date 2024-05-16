@@ -17,8 +17,6 @@
 package com.iexec.standalone.chain;
 
 import com.iexec.commons.poco.chain.Web3jAbstractService;
-import com.iexec.standalone.config.BlockchainAdapterConfigurationService;
-import com.iexec.standalone.config.WorkerConfigurationService;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -32,20 +30,6 @@ public class Web3jService extends Web3jAbstractService {
                 chainConfig.getGasPriceMultiplier(),
                 chainConfig.getGasPriceCap(),
                 chainConfig.isSidechain()
-        );
-    }
-
-    public Web3jService(BlockchainAdapterConfigurationService blockchainAdapterConfigurationService,
-                        WorkerConfigurationService workerConfService) {
-        super(
-                blockchainAdapterConfigurationService.getChainId(),
-                !workerConfService.getOverrideBlockchainNodeAddress().isEmpty() ?
-                        workerConfService.getOverrideBlockchainNodeAddress() :
-                        blockchainAdapterConfigurationService.getChainNodeUrl(),
-                blockchainAdapterConfigurationService.getBlockTime(),
-                workerConfService.getGasPriceMultiplier(),
-                workerConfService.getGasPriceCap(),
-                blockchainAdapterConfigurationService.isSidechain()
         );
     }
 
