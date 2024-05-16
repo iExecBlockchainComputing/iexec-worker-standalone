@@ -18,6 +18,7 @@ package com.iexec.standalone.chain;
 
 import com.iexec.standalone.chain.event.ChainConnectedEvent;
 import com.iexec.standalone.chain.event.ChainDisconnectedEvent;
+import com.iexec.standalone.config.ChainConfig;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

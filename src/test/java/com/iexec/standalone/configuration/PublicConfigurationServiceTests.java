@@ -16,9 +16,8 @@
 
 package com.iexec.standalone.configuration;
 
-import com.iexec.standalone.chain.ChainConfig;
+import com.iexec.standalone.config.ChainConfig;
 import com.iexec.standalone.chain.CredentialsService;
-import com.iexec.standalone.chain.adapter.BlockchainAdapterClientConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;

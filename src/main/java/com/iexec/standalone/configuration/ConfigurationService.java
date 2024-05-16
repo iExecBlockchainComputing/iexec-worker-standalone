@@ -16,7 +16,7 @@
 
 package com.iexec.standalone.configuration;
 
-import com.iexec.standalone.chain.ChainConfig;
+import com.iexec.standalone.config.ChainConfig;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;

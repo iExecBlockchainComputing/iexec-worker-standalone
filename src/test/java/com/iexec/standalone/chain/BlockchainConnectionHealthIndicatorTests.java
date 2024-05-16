@@ -16,6 +16,7 @@
 
 package com.iexec.standalone.chain;
 
+import com.iexec.standalone.config.ChainConfig;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
