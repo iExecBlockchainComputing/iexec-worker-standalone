@@ -20,7 +20,7 @@ import com.iexec.common.contribution.Contribution;
 import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.contract.generated.IexecHubContract;
 import com.iexec.commons.poco.utils.BytesUtils;
-import com.iexec.standalone.config.BlockchainAdapterConfigurationService;
+import com.iexec.standalone.config.ChainConfig;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
@@ -66,8 +66,6 @@ class IexecHubServiceTests {
     private static final String CHAIN_TASK_ID = "0x5125c4ca7176e40d8c5386072a6f262029609a5d3a896fbf592cd965e65098d9";
 
     @Mock
-    private BlockchainAdapterConfigurationService blockchainAdapterConfigurationService;
-    @Mock
     private CredentialsService credentialsService;
     @Mock
     private Web3jService web3jService;
@@ -86,9 +84,9 @@ class IexecHubServiceTests {
     @BeforeEach
     void init() throws Exception {
         MockitoAnnotations.openMocks(this);
-        when(blockchainAdapterConfigurationService.getIexecHubContractAddress()).thenReturn("0x748e091bf16048cb5103E0E10F9D5a8b7fBDd860");
-        when(blockchainAdapterConfigurationService.getBlockTime()).thenReturn(Duration.ofSeconds(5L));
-        when(blockchainAdapterConfigurationService.getChainId()).thenReturn(65535);
+        when(chainConfig.getHubAddress()).thenReturn("0x748e091bf16048cb5103E0E10F9D5a8b7fBDd860");
+        when(chainConfig.getBlockTime()).thenReturn(Duration.ofSeconds(5L));
+        when(chainConfig.getChainId()).thenReturn(65535);
         credentials = Credentials.create(Keys.createEcKeyPair());
         when(credentialsService.getCredentials()).thenReturn(credentials);
         when(web3jService.hasEnoughGas(any())).thenReturn(true);
