@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - Setup sgx-related classes. (#4, #10)
 - Setup dataset-related classes (#5, #7)
 - Setup utils-related classes (#11)
+- Setup metric-related classes (#12)
 - Setup chain-related classes (#13)
 
 ### Quality

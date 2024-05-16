@@ -23,16 +23,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class MetricControllerTests {
+class MetricsControllerTests {
 
     @Mock
-    private MetricService metricService;
+    private MetricsService metricsService;
 
     @InjectMocks
-    private MetricController metricController;
+    private MetricsController metricsController;
 
     @BeforeEach
     void init() {
@@ -45,12 +47,25 @@ class MetricControllerTests {
                 .aliveAvailableCpu(1)
                 .aliveAvailableGpu(1)
                 .build();
-        when(metricService.getPlatformMetrics()).thenReturn(metric);
+        when(metricsService.getPlatformMetrics()).thenReturn(metric);
         Assertions.assertThat(
-                metricController.getPlatformMetric().getStatusCode())
+                metricsController.getPlatformMetric().getStatusCode())
         .isEqualTo(HttpStatus.OK);
         Assertions.assertThat(
-                metricController.getPlatformMetric().getBody())
+                metricsController.getPlatformMetric().getBody())
         .isEqualTo(metric);
     }
+
+    // region getWorkerMetrics
+    @Test
+    void shouldGetWorkerMetrics() {
+        final WorkerMetrics metrics = mock(WorkerMetrics.class);
+        when(metricsService.getWorkerMetrics()).thenReturn(metrics);
+
+        final ResponseEntity<WorkerMetrics> response = metricsController.getWorkerMetrics();
+
+        Assertions.assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Assertions.assertThat(response.getBody()).isEqualTo(metrics);
+    }
+    // endregion
 }
