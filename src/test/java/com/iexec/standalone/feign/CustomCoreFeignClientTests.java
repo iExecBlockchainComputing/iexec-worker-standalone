@@ -20,7 +20,7 @@ import com.iexec.common.replicate.ReplicateStatus;
 import com.iexec.common.replicate.ReplicateStatusUpdate;
 import com.iexec.common.replicate.ReplicateTaskSummary;
 import com.iexec.commons.poco.notification.TaskNotificationType;
-import com.iexec.worker.feign.client.CoreClient;
+import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

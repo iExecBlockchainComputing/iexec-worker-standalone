@@ -22,7 +22,7 @@ import com.iexec.common.replicate.ReplicateStatusUpdate;
 import com.iexec.common.replicate.ReplicateTaskSummary;
 import com.iexec.commons.poco.notification.TaskNotification;
 import com.iexec.commons.poco.notification.TaskNotificationType;
-import com.iexec.worker.feign.client.CoreClient;
+import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;

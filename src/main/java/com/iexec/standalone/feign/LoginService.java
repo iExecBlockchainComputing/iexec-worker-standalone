@@ -18,8 +18,8 @@ package com.iexec.standalone.feign;
 
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.worker.chain.CredentialsService;
-import com.iexec.worker.feign.client.CoreClient;
+import com.iexec.standalone.chain.CredentialsService;
+import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;

@@ -18,8 +18,8 @@ package com.iexec.standalone.feign;
 
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.worker.chain.CredentialsService;
-import com.iexec.worker.feign.client.CoreClient;
+import com.iexec.standalone.chain.CredentialsService;
+import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,7 +42,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import static com.iexec.worker.feign.LoginService.TOKEN_PREFIX;
+import static com.iexec.standalone.feign.LoginService.TOKEN_PREFIX;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;

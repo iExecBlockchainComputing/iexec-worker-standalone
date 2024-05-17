@@ -16,7 +16,7 @@
 
 package com.iexec.standalone.feign.config;
 
-import com.iexec.worker.config.WorkerConfigurationService;
+import com.iexec.standalone.config.WorkerConfigurationService;
 import org.apache.http.HttpHost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.springframework.context.annotation.Bean;
