@@ -16,7 +16,7 @@
 
 package com.iexec.standalone.configuration;
 
-import com.iexec.standalone.config.ChainConfig;
+import com.iexec.standalone.chain.ChainConfig;
 import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.config.PublicConfiguration;
 import lombok.extern.slf4j.Slf4j;

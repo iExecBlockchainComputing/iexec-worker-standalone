@@ -20,7 +20,6 @@ import com.iexec.common.contribution.Contribution;
 import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.contract.generated.IexecHubContract;
 import com.iexec.commons.poco.utils.BytesUtils;
-import com.iexec.standalone.config.ChainConfig;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;

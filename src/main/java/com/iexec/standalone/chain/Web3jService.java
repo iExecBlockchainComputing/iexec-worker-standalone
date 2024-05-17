@@ -17,7 +17,6 @@
 package com.iexec.standalone.chain;
 
 import com.iexec.commons.poco.chain.Web3jAbstractService;
-import com.iexec.standalone.config.ChainConfig;
 import org.springframework.stereotype.Service;
 
 @Service

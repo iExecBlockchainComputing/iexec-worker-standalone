@@ -22,7 +22,6 @@ import com.iexec.commons.poco.tee.TeeUtils;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.standalone.chain.event.ChainConnectedEvent;
 import com.iexec.standalone.chain.event.ChainDisconnectedEvent;
-import com.iexec.standalone.config.ChainConfig;
 import com.iexec.standalone.configuration.ConfigurationService;
 import com.iexec.standalone.task.Task;
 import com.iexec.standalone.task.TaskService;

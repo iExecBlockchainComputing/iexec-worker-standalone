@@ -22,7 +22,6 @@ import com.iexec.commons.poco.chain.ChainDeal;
 import com.iexec.commons.poco.chain.DealParams;
 import com.iexec.commons.poco.contract.generated.IexecHubContract;
 import com.iexec.commons.poco.utils.BytesUtils;
-import com.iexec.standalone.config.ChainConfig;
 import com.iexec.standalone.configuration.ConfigurationService;
 import com.iexec.standalone.task.Task;
 import com.iexec.standalone.task.TaskService;

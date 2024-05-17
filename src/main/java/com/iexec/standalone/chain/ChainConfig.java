@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.iexec.standalone.config;
+package com.iexec.standalone.chain;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
