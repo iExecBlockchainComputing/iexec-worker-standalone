@@ -5,20 +5,15 @@ import org.apache.http.HttpHost;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class RestTemplateConfigTests {
 
     @Mock
@@ -27,18 +22,15 @@ class RestTemplateConfigTests {
     @InjectMocks
     private RestTemplateConfig restTemplateConfig;
 
-    private final String HTTPS_PROXY_HOST_PROPERTY_NAME = "https.proxyHost";
-    private final String HTTPS_PROXY_PORT_PROPERTY_NAME = "https.proxyPort";
-
     private static final String HTTPS_PROXY_HOST_VALUE = "httpsProxyHost";
     private static final int HTTPS_PROXY_PORT_VALUE = 443;
     private static final String HTTP_PROXY_HOST_VALUE = "httpProxyHost";
     private static final int HTTP_PROXY_PORT_VALUE = 80;
 
-    /*@BeforeEach
+    @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-    }*/
+    }
 
     @Test
     void testConstructor() {
@@ -55,35 +47,14 @@ class RestTemplateConfigTests {
         assertNotNull(factory.getHttpClient());
     }
 
-    private void resetSystemPropertiesLikeBeforeTest(String propertyName, String originalValue) {
-        if (originalValue != null) {
-            System.setProperty(propertyName, originalValue);
-            String resetValue = System.getProperty(propertyName);
-            assertThat(resetValue).isEqualTo(originalValue);
-        } else {
-            System.clearProperty(propertyName);
-        }
-    }
-
     @Test
     void testSetProxy_HttpsProxy() {
         HttpClientBuilder clientBuilder = mock(HttpClientBuilder.class);
-
-        String originalHttpsProxyHost = System.getProperty(HTTPS_PROXY_HOST_PROPERTY_NAME);
-        System.setProperty(HTTPS_PROXY_HOST_PROPERTY_NAME, HTTPS_PROXY_HOST_VALUE);
         when(workerConfService.getHttpsProxyHost()).thenReturn(HTTPS_PROXY_HOST_VALUE);
-
-        String originalHttpsProxyPort = System.getProperty(HTTPS_PROXY_PORT_PROPERTY_NAME);
-        System.setProperty(HTTPS_PROXY_PORT_PROPERTY_NAME, Integer.valueOf(HTTPS_PROXY_PORT_VALUE).toString());
         when(workerConfService.getHttpsProxyPort()).thenReturn(HTTPS_PROXY_PORT_VALUE);
-
         restTemplateConfig.setProxy(clientBuilder);
-
         HttpHost expectedProxy = new HttpHost(HTTPS_PROXY_HOST_VALUE, HTTPS_PROXY_PORT_VALUE, "https");
-        verify(clientBuilder).setProxy(any());
-
-        resetSystemPropertiesLikeBeforeTest(HTTPS_PROXY_HOST_PROPERTY_NAME, originalHttpsProxyHost);
-        resetSystemPropertiesLikeBeforeTest(HTTPS_PROXY_PORT_PROPERTY_NAME, originalHttpsProxyPort);
+        verify(clientBuilder).setProxy(expectedProxy);
     }
 
     @Test

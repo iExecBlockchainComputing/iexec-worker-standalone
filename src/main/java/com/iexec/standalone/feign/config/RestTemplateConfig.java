@@ -51,14 +51,10 @@ public class RestTemplateConfig {
     * */
     void setProxy(HttpClientBuilder clientBuilder) {
         HttpHost proxy = null;
-        String httpsProxyHost = workerConfService.getHttpsProxyHost();
-        Integer httpsProxyPort = workerConfService.getHttpsProxyPort();
-        String httpProxyHost = workerConfService.getHttpProxyHost();
-        Integer httpProxyPort = workerConfService.getHttpProxyPort();
-        if (httpsProxyHost != null && httpsProxyPort != null) {
-            proxy = new HttpHost(httpsProxyHost, httpsProxyPort, "https");
-        } else if (httpProxyHost != null && httpProxyPort != null) {
-            proxy = new HttpHost(httpProxyHost, httpProxyPort, "http");
+        if (workerConfService.getHttpsProxyHost() != null && workerConfService.getHttpsProxyPort() != null) {
+            proxy = new HttpHost(workerConfService.getHttpsProxyHost(), workerConfService.getHttpsProxyPort(), "https");
+        } else if (workerConfService.getHttpProxyHost() != null && workerConfService.getHttpProxyPort() != null) {
+            proxy = new HttpHost(workerConfService.getHttpProxyHost(), workerConfService.getHttpProxyPort(), "http");
         }
         if (proxy != null){
             clientBuilder.setProxy(proxy);
