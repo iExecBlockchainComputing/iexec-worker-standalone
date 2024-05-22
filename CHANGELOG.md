@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - Setup utils-related classes (#11)
 - Setup metric-related classes (#12)
 - Setup chain-related classes (#13)
+- Setup feign-related classes (#14)
 - Setup sms-related classes (#15)
 
 ### Quality
