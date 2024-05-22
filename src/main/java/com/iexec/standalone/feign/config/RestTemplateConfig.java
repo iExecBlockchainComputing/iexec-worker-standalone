@@ -33,6 +33,7 @@ public class RestTemplateConfig {
     public RestTemplateConfig(WorkerConfigurationService workerConfService) {
         this.workerConfService = workerConfService;
     }
+
     @Bean
     public RestTemplate restTemplate() {
         HttpClientBuilder clientBuilder = HttpClientBuilder.create();
@@ -48,12 +49,16 @@ public class RestTemplateConfig {
     * Use HttpRoutePlanner to support both http & https proxies at the same time
     * https://stackoverflow.com/a/34432952
     * */
-    private void setProxy(HttpClientBuilder clientBuilder) {
+    void setProxy(HttpClientBuilder clientBuilder) {
         HttpHost proxy = null;
-        if (workerConfService.getHttpsProxyHost() != null && workerConfService.getHttpsProxyPort() != null) {
-            proxy = new HttpHost(workerConfService.getHttpsProxyHost(), workerConfService.getHttpsProxyPort(), "https");
-        } else if (workerConfService.getHttpProxyHost() != null && workerConfService.getHttpProxyPort() != null) {
-            proxy = new HttpHost(workerConfService.getHttpProxyHost(), workerConfService.getHttpProxyPort(), "http");
+        String httpsProxyHost = workerConfService.getHttpsProxyHost();
+        Integer httpsProxyPort = workerConfService.getHttpsProxyPort();
+        String httpProxyHost = workerConfService.getHttpProxyHost();
+        Integer httpProxyPort = workerConfService.getHttpProxyPort();
+        if (httpsProxyHost != null && httpsProxyPort != null) {
+            proxy = new HttpHost(httpsProxyHost, httpsProxyPort, "https");
+        } else if (httpProxyHost != null && httpProxyPort != null) {
+            proxy = new HttpHost(httpProxyHost, httpProxyPort, "http");
         }
         if (proxy != null){
             clientBuilder.setProxy(proxy);
