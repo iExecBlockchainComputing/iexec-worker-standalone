@@ -16,32 +16,46 @@
 
 package com.iexec.standalone.sms;
 
+import com.iexec.common.lifecycle.purge.ExpiringTaskMapFactory;
+import com.iexec.common.lifecycle.purge.Purgeable;
+import com.iexec.common.web.ApiResponseBodyDecoder;
+import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.tee.TeeFramework;
 import com.iexec.commons.poco.tee.TeeUtils;
 import com.iexec.commons.poco.utils.BytesUtils;
+import com.iexec.commons.poco.utils.HashUtils;
+import com.iexec.sms.api.*;
 import com.iexec.standalone.chain.SignatureService;
+import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.registry.PlatformRegistryConfiguration;
-import com.iexec.sms.api.SmsClient;
-import com.iexec.sms.api.SmsClientProvider;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.web3j.crypto.Hash;
 
+import java.util.Map;
 import java.util.Optional;
+
+import static com.iexec.sms.secret.ReservedSecretKeyName.IEXEC_RESULT_IEXEC_IPFS_TOKEN;
 
 @Slf4j
 @Service
-public class SmsService {
+public class SmsService implements Purgeable {
+
     private final PlatformRegistryConfiguration registryConfiguration;
     private final SignatureService signatureService;
+    private final CredentialsService credentialsService;
     private final SmsClientProvider smsClientProvider;
+    private final Map<String, String> taskIdToSmsUrl = ExpiringTaskMapFactory.getExpiringTaskMap();
 
     public SmsService(PlatformRegistryConfiguration registryConfiguration,
                       SignatureService signatureService,
+                      CredentialsService credentialsService,
                       SmsClientProvider smsClientProvider) {
         this.registryConfiguration = registryConfiguration;
         this.signatureService = signatureService;
+        this.credentialsService = credentialsService;
         this.smsClientProvider = smsClientProvider;
     }
 
@@ -146,5 +160,115 @@ public class SmsService {
                     chainTaskId, smsUrl, e);
         }
         return Optional.empty();
+    }
+
+    public void attachSmsUrlToTask(String chainTaskId, String smsUrl) {
+        taskIdToSmsUrl.put(chainTaskId, smsUrl);
+    }
+
+    public SmsClient getSmsClient(String chainTaskId) {
+        String url = taskIdToSmsUrl.get(chainTaskId);
+        if (StringUtils.isEmpty(url)) {
+            // if url is not here anymore, worker might hit core on GET /tasks
+            // to retrieve SMS URL
+            throw new SmsClientCreationException("No SMS URL defined for " +
+                    "given task [chainTaskId: " + chainTaskId + "]");
+        }
+        return smsClientProvider.getSmsClient(url);
+    }
+
+    /**
+     * Checks if a JWT is present to upload results for TEE tasks.
+     *
+     * @param workerpoolAuthorization Authorization
+     * @return {@literal true} if an entry was found, {@literal false} if the secret was not found or an error happened
+     */
+    private boolean isTokenPresent(WorkerpoolAuthorization workerpoolAuthorization) {
+        final SmsClient smsClient = getSmsClient(workerpoolAuthorization.getChainTaskId());
+        try {
+            smsClient.isWeb2SecretSet(workerpoolAuthorization.getWorkerWallet(), IEXEC_RESULT_IEXEC_IPFS_TOKEN);
+            return true;
+        } catch (FeignException.NotFound e) {
+            log.info("Worker Result Proxy JWT does not exist in SMS");
+        } catch (FeignException e) {
+            log.error("Worker Result Proxy JWT existence check failed with error", e);
+        }
+        return false;
+    }
+
+    /**
+     * Push a JWT as a Web2 secret in the SMS.
+     *
+     * @param workerpoolAuthorization Authorization
+     * @param token                   JWT to push in the SMS
+     * @return {@literal true} if secret is in SMS, {@literal false} otherwise
+     */
+    public boolean pushToken(WorkerpoolAuthorization workerpoolAuthorization, String token) {
+        final SmsClient smsClient = getSmsClient(workerpoolAuthorization.getChainTaskId());
+        try {
+            final String challenge = HashUtils.concatenateAndHash(
+                    Hash.sha3String("IEXEC_SMS_DOMAIN"),
+                    workerpoolAuthorization.getWorkerWallet(),
+                    Hash.sha3String(IEXEC_RESULT_IEXEC_IPFS_TOKEN),
+                    Hash.sha3String(token));
+            final String authorization = credentialsService.hashAndSignMessage(challenge).getValue();
+            if (authorization.isEmpty()) {
+                log.error("Couldn't sign challenge for an unknown reason [hash:{}]", challenge);
+                return false;
+            }
+
+            if (isTokenPresent(workerpoolAuthorization)) {
+                smsClient.updateWeb2Secret(authorization, workerpoolAuthorization.getWorkerWallet(), IEXEC_RESULT_IEXEC_IPFS_TOKEN, token);
+            } else {
+                smsClient.setWeb2Secret(authorization, workerpoolAuthorization.getWorkerWallet(), IEXEC_RESULT_IEXEC_IPFS_TOKEN, token);
+            }
+            smsClient.isWeb2SecretSet(workerpoolAuthorization.getWorkerWallet(), IEXEC_RESULT_IEXEC_IPFS_TOKEN);
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to push Web2 secret to SMS", e);
+        }
+        return false;
+    }
+
+    // TODO: use the below method with retry.
+    public TeeSessionGenerationResponse createTeeSession(WorkerpoolAuthorization workerpoolAuthorization) throws TeeSessionGenerationException {
+        String chainTaskId = workerpoolAuthorization.getChainTaskId();
+        log.info("Creating TEE session [chainTaskId:{}]", chainTaskId);
+        String authorization = getAuthorizationString(workerpoolAuthorization);
+
+        // SMS client should already have been created once before.
+        // If it couldn't be created, then the task would have been aborted.
+        // So the following won't throw an exception.
+        final SmsClient smsClient = getSmsClient(chainTaskId);
+
+        try {
+            TeeSessionGenerationResponse session = smsClient
+                    .generateTeeSession(authorization, workerpoolAuthorization)
+                    .getData();
+            log.info("Created TEE session [chainTaskId:{}, session:{}]",
+                    chainTaskId, session);
+            return session;
+        } catch (FeignException e) {
+            log.error("SMS failed to create TEE session [chainTaskId:{}]",
+                    chainTaskId, e);
+            final Optional<TeeSessionGenerationError> error = ApiResponseBodyDecoder.getErrorFromResponse(e.contentUTF8(), TeeSessionGenerationError.class);
+            throw new TeeSessionGenerationException(error.orElse(TeeSessionGenerationError.UNKNOWN_ISSUE));
+        }
+    }
+
+    private String getAuthorizationString(WorkerpoolAuthorization workerpoolAuthorization) {
+        String challenge = workerpoolAuthorization.getHash();
+        return credentialsService.hashAndSignMessage(challenge).getValue();
+    }
+
+    @Override
+    public boolean purgeTask(String chainTaskId) {
+        taskIdToSmsUrl.remove(chainTaskId);
+        return !taskIdToSmsUrl.containsKey(chainTaskId);
+    }
+
+    @Override
+    public void purgeAllTasksData() {
+        taskIdToSmsUrl.clear();
     }
 }
