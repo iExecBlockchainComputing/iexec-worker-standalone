@@ -77,6 +77,6 @@ class RestTemplateConfigTests {
         when(workerConfService.getHttpProxyHost()).thenReturn(null);
         when(workerConfService.getHttpProxyPort()).thenReturn(null);
         restTemplateConfig.setProxy(clientBuilder);
-        verify(clientBuilder, never()).setProxy(any(HttpHost.class));
+        verifyNoInteractions(clientBuilder);
     }
 }
