@@ -35,10 +35,10 @@ class RestTemplateConfigTests {
     private static final String HTTP_PROXY_HOST_VALUE = "httpProxyHost";
     private static final int HTTP_PROXY_PORT_VALUE = 80;
 
-    @BeforeEach
+    /*@BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-    }
+    }*/
 
     @Test
     void testConstructor() {
