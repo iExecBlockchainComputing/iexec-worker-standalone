@@ -298,7 +298,7 @@ class ResultServiceTests {
     }
 
     @Test
-    void testGetResultModelWithZip() throws IOException {
+    void testGetResultModelWithZip() {
         ResultInfo resultInfo = mock(ResultInfo.class);
         when(resultInfo.getImage()).thenReturn("image");
         when(resultInfo.getCmd()).thenReturn("cmd");
@@ -320,7 +320,7 @@ class ResultServiceTests {
     }
 
     @Test
-    void testGetResultModelWithZip_FileNotFound() throws IOException {
+    void testGetResultModelWithZip_FileNotFound() {
         ResultInfo resultInfo = mock(ResultInfo.class);
         when(resultInfo.getImage()).thenReturn("image");
         when(resultInfo.getCmd()).thenReturn("cmd");
