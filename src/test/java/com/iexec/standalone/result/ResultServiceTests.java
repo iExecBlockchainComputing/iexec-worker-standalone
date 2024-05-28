@@ -132,7 +132,6 @@ class ResultServiceTests {
     private Credentials schedulerCreds;
     private Signature signature;
     private String tmp;
-    private Map<String, ResultInfo> resultInfoMap;
 
     @BeforeEach
     void init() {
@@ -149,7 +148,6 @@ class ResultServiceTests {
                 .build();
         when(signatureService.getAddress()).thenReturn(schedulerCreds.getAddress());
         tmp = folderRule.getAbsolutePath();
-        resultInfoMap = new HashMap<>();
     }
 
     @Test
@@ -297,39 +295,39 @@ class ResultServiceTests {
 
     @Test
     void testUploadResultAndGetLinkCallback() {
-        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
         TaskDescription taskDescription = mock(TaskDescription.class);
-        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
-        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
         when(taskDescription.containsCallback()).thenReturn(true);
-        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
         assertThat(resultLink).isEqualTo("{ \"storage\": \"ethereum\", \"location\": \"null\" }");
     }
 
     @Test
     void testUploadResultAndGetLinkTeeTask() {
-        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
         TaskDescription taskDescription = mock(TaskDescription.class);
-        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
-        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
         when(taskDescription.containsCallback()).thenReturn(false);
         when(taskDescription.isTeeTask()).thenReturn(true);
         when(taskDescription.getResultStorageProvider()).thenReturn("dropbox");
-        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
-        assertThat(resultLink).isEqualTo("{ \"storage\": \"dropbox\", \"location\": \"/results/task1\" }");
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
+        assertThat(resultLink).isEqualTo("{ \"storage\": \"dropbox\", \"location\": \"/results/" + CHAIN_TASK_ID + "\" }");
     }
 
     @Test
     void testNotUploadResultAndGetLink() {
-        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
         TaskDescription taskDescription = mock(TaskDescription.class);
-        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
-        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
         when(taskDescription.containsCallback()).thenReturn(false);
         when(taskDescription.isTeeTask()).thenReturn(false);
         when(taskDescription.getResultStorageProvider()).thenReturn("notIpfs");
-        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
-        assertThat(resultLink).isEqualTo("");
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
+        assertThat(resultLink).isEmpty();
     }
 
     @Test
