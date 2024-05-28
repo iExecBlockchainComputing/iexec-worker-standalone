@@ -62,6 +62,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -128,6 +129,8 @@ class ResultServiceTests {
     @InjectMocks
     private ResultService resultService;
 
+    private ResultService spyResultService;
+
     private Credentials enclaveCreds;
     private Credentials schedulerCreds;
     private Signature signature;
@@ -148,6 +151,7 @@ class ResultServiceTests {
                 .build();
         when(signatureService.getAddress()).thenReturn(schedulerCreds.getAddress());
         tmp = folderRule.getAbsolutePath();
+        spyResultService = spy(resultService);
     }
 
     @Test
@@ -291,6 +295,71 @@ class ResultServiceTests {
         assertThat(resultInfo.getCmd()).isEqualTo("cmd");
         assertThat(resultInfo.getDeterministHash()).isEqualTo("digest");
         assertThat(resultInfo.getDatasetUri()).isEqualTo("datasetUri");
+    }
+
+    @Test
+    void testGetResultModelWithZip() throws IOException {
+        ResultInfo resultInfo = mock(ResultInfo.class);
+        when(resultInfo.getImage()).thenReturn("image");
+        when(resultInfo.getCmd()).thenReturn("cmd");
+        when(resultInfo.getDeterministHash()).thenReturn("hash");
+
+        doReturn(resultInfo).when(spyResultService).getResultInfos(CHAIN_TASK_ID);
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.readAllBytes(any(Path.class))).thenReturn(new byte[]{1, 2, 3});
+
+            ResultModel resultModel = spyResultService.getResultModelWithZip(CHAIN_TASK_ID);
+
+            assertThat(resultModel).isNotNull();
+            assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+            assertThat(resultModel.getImage()).isEqualTo("image");
+            assertThat(resultModel.getCmd()).isEqualTo("cmd");
+            assertThat(resultModel.getZip()).isEqualTo(new byte[]{1, 2, 3});
+            assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
+        }
+    }
+
+    @Test
+    void testGetResultModelWithZip_FileNotFound() throws IOException {
+        ResultInfo resultInfo = mock(ResultInfo.class);
+        when(resultInfo.getImage()).thenReturn("image");
+        when(resultInfo.getCmd()).thenReturn("cmd");
+        when(resultInfo.getDeterministHash()).thenReturn("hash");
+
+        doReturn(resultInfo).when(spyResultService).getResultInfos(CHAIN_TASK_ID);
+        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
+            mockedFiles.when(() -> Files.readAllBytes(any(Path.class))).thenThrow(new IOException("File not found"));
+
+            ResultModel resultModel = spyResultService.getResultModelWithZip(CHAIN_TASK_ID);
+
+            assertThat(resultModel).isNotNull();
+            assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+            assertThat(resultModel.getImage()).isEqualTo("image");
+            assertThat(resultModel.getCmd()).isEqualTo("cmd");
+            assertThat(resultModel.getZip()).isEqualTo(new byte[0]);
+            assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
+        }
+    }
+
+    @Test
+    void testCleanUnusedResultFolders() {
+        List<String> recoveredTasks = Arrays.asList("task1", "task2");
+        doReturn(Arrays.asList("task1", "task3")).when(spyResultService).getAllChainTaskIdsInResultFolder();
+        doReturn(true).when(spyResultService).purgeTask("task3");
+        spyResultService.cleanUnusedResultFolders(recoveredTasks);
+        verify(spyResultService, times(1)).purgeTask("task3");
+    }
+
+    @Test
+    void testGetAllChainTaskIdsInResultFolder_Empty() {
+        File mockFile = mock(File.class);
+        when(workerConfigurationService.getWorkerBaseDir()).thenReturn("/mock/path");
+        when(mockFile.list(any())).thenReturn(null);
+
+        List<String> result = resultService.getAllChainTaskIdsInResultFolder();
+
+        assertThat(result).isNotNull();
+        assertThat(result.isEmpty()).isTrue();
     }
 
     @Test
