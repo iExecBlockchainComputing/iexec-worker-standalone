@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iexec.common.replicate.ReplicateStatus;
 import com.iexec.common.replicate.ReplicateStatusCause;
 import com.iexec.common.result.ComputedFile;
+import com.iexec.common.result.ResultModel;
 import com.iexec.common.utils.FileHelper;
 import com.iexec.common.utils.IexecFileHelper;
 import com.iexec.commons.poco.chain.ChainTask;
@@ -51,15 +52,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
+import org.springframework.boot.actuate.scheduling.ScheduledTasksEndpoint;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.regex.Pattern;
 
 import static com.iexec.commons.poco.chain.DealParams.DROPBOX_RESULT_STORAGE_PROVIDER;
@@ -128,6 +132,7 @@ class ResultServiceTests {
     private Credentials schedulerCreds;
     private Signature signature;
     private String tmp;
+    private Map<String, ResultInfo> resultInfoMap;
 
     @BeforeEach
     void init() {
@@ -144,6 +149,7 @@ class ResultServiceTests {
                 .build();
         when(signatureService.getAddress()).thenReturn(schedulerCreds.getAddress());
         tmp = folderRule.getAbsolutePath();
+        resultInfoMap = new HashMap<>();
     }
 
     @Test
@@ -205,6 +211,33 @@ class ResultServiceTests {
     }
 
     @Test
+    void testIsResultUploaded() throws Exception {
+        Method method = ResultService.class.getDeclaredMethod("isResultUploaded", FeignException.class, String.class);
+        method.setAccessible(true);
+        FeignException feignException = mock(FeignException.class);
+        boolean result = (boolean) method.invoke(resultService, feignException, CHAIN_TASK_ID);
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void testGetResultFolderPath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getResultFolderPath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER);
+    }
+
+    @Test
+    void testGetResultZipFilePath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getResultZipFilePath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER + ".zip");
+    }
+
+    @Test
+    void testGetEncryptedResultFilePath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getEncryptedResultFilePath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER + ".zip");
+    }
+
+    @Test
     void shouldWriteErrorToIexecOut() {
         when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
@@ -240,6 +273,63 @@ class ResultServiceTests {
                 ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
 
         Assertions.assertThat(isErrorWritten).isFalse();
+    }
+
+    @Test
+    void testSaveResultInfo() {
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        ComputedFile computedFile = mock(ComputedFile.class);
+
+        when(taskDescription.getAppUri()).thenReturn("appUri");
+        when(taskDescription.getCmd()).thenReturn("cmd");
+        when(computedFile.getResultDigest()).thenReturn("digest");
+        when(taskDescription.getDatasetUri()).thenReturn("datasetUri");
+
+        resultService.saveResultInfo(CHAIN_TASK_ID, taskDescription, computedFile);
+
+        ResultInfo resultInfo = resultService.getResultInfos(CHAIN_TASK_ID);
+        assertThat(resultInfo).isNotNull();
+        assertThat(resultInfo.getImage()).isEqualTo("appUri");
+        assertThat(resultInfo.getCmd()).isEqualTo("cmd");
+        assertThat(resultInfo.getDeterministHash()).isEqualTo("digest");
+        assertThat(resultInfo.getDatasetUri()).isEqualTo("datasetUri");
+    }
+
+    @Test
+    void testUploadResultAndGetLinkCallback() {
+        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
+        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(true);
+        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
+        assertThat(resultLink).isEqualTo("{ \"storage\": \"ethereum\", \"location\": \"null\" }");
+    }
+
+    @Test
+    void testUploadResultAndGetLinkTeeTask() {
+        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
+        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(false);
+        when(taskDescription.isTeeTask()).thenReturn(true);
+        when(taskDescription.getResultStorageProvider()).thenReturn("dropbox");
+        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
+        assertThat(resultLink).isEqualTo("{ \"storage\": \"dropbox\", \"location\": \"/results/task1\" }");
+    }
+
+    @Test
+    void testNotUploadResultAndGetLink() {
+        WorkerpoolAuthorization workerpoolAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(workerpoolAuthorization.getChainTaskId()).thenReturn("task1");
+        when(iexecHubService.getTaskDescription("task1")).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(false);
+        when(taskDescription.isTeeTask()).thenReturn(false);
+        when(taskDescription.getResultStorageProvider()).thenReturn("notIpfs");
+        String resultLink = resultService.uploadResultAndGetLink(workerpoolAuthorization);
+        assertThat(resultLink).isEqualTo("");
     }
 
     @Test
