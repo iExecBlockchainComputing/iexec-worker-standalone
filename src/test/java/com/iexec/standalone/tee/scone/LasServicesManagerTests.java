@@ -221,7 +221,6 @@ class LasServicesManagerTests {
         LasServicesManager lasServiceManager = new LasServicesManager(
                 sconeConfiguration, teeServicesPropertiesService, workerConfigService,
                 sgxService, dockerService, WORKER_WALLET_ADDRESS);
-        ECKeyPair.create(new BigInteger(32, new Random()));
         String createdLasContainerName = lasServiceManager.createLasContainerName();
         Assertions.assertTrue(
                 createdLasContainerName.length() < 64);
@@ -240,7 +239,6 @@ class LasServicesManagerTests {
         LasServicesManager lasServManager = new LasServicesManager(
                 sconeConfiguration, teeServicesPropertiesService, workerConfigService,
                 sgxService, dockerService, WORKER_WALLET_ADDRESS);
-        ECKeyPair.create(new BigInteger(32, new Random()));
         //calling twice should return different values
         Assertions.assertNotEquals(lasServManager.createLasContainerName(),
                 lasServManager.createLasContainerName());
