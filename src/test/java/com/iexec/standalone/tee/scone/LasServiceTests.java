@@ -126,7 +126,7 @@ class LasServiceTests {
 
     @Test
     void shouldNotStartLasServiceSinceUnknownRegistry() {
-        LasService lasService = new LasService(
+        LasService lasService2 = new LasService(
                 CONTAINER_NAME,
                 "unknownRegistry",
                 sconeConfiguration,
@@ -135,8 +135,8 @@ class LasServiceTests {
                 dockerService
         );
 
-        assertFalse(lasService.start());
-        assertFalse(lasService.isStarted());
+        assertFalse(lasService2.start());
+        assertFalse(lasService2.isStarted());
     }
 
     @Test

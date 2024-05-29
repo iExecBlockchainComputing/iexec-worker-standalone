@@ -19,7 +19,6 @@ package com.iexec.standalone.tee;
 import com.iexec.commons.poco.tee.TeeFramework;
 import com.iexec.standalone.tee.scone.TeeSconeService;
 import com.iexec.standalone.tee.gramine.TeeGramineService;
-import com.iexec.standalone.tee.scone.TeeSconeService;
 import org.springframework.stereotype.Service;
 
 @Service

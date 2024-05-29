@@ -218,11 +218,11 @@ class LasServicesManagerTests {
     // region createLasContainerName
     @Test
     void shouldCreateLasContainerNameWithProperCharLength() {
-        LasServicesManager lasServicesManager = new LasServicesManager(
+        LasServicesManager lasServiceManager = new LasServicesManager(
                 sconeConfiguration, teeServicesPropertiesService, workerConfigService,
                 sgxService, dockerService, WORKER_WALLET_ADDRESS);
-        ECKeyPair keyPair = ECKeyPair.create(new BigInteger(32, new Random()));
-        String createdLasContainerName = lasServicesManager.createLasContainerName();
+        ECKeyPair.create(new BigInteger(32, new Random()));
+        String createdLasContainerName = lasServiceManager.createLasContainerName();
         Assertions.assertTrue(
                 createdLasContainerName.length() < 64);
         //more checks about
@@ -237,13 +237,13 @@ class LasServicesManagerTests {
 
     @Test
     void shouldCreateLasContainerNameWithRandomness() {
-        LasServicesManager lasServicesManager = new LasServicesManager(
+        LasServicesManager lasServManager = new LasServicesManager(
                 sconeConfiguration, teeServicesPropertiesService, workerConfigService,
                 sgxService, dockerService, WORKER_WALLET_ADDRESS);
-        ECKeyPair keyPair = ECKeyPair.create(new BigInteger(32, new Random()));
+        ECKeyPair.create(new BigInteger(32, new Random()));
         //calling twice should return different values
-        Assertions.assertNotEquals(lasServicesManager.createLasContainerName(),
-                lasServicesManager.createLasContainerName());
+        Assertions.assertNotEquals(lasServManager.createLasContainerName(),
+                lasServManager.createLasContainerName());
     }
     // endregion
 
