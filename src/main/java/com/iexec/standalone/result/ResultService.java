@@ -67,8 +67,6 @@ public class ResultService implements Purgeable {
     public static final String ERROR_FILENAME = "error.txt";
     public static final String WRITE_COMPUTED_FILE_LOG_ARGS = " [chainTaskId:{}, computedFile:{}]";
 
-    public static final String WRITE_COMPUTED_FILE_LOG_ARGS = " [chainTaskId:{}, computedFile:{}]";
-
     private final ResultProxyClient resultProxyClient;
     private final SignatureService signatureService;
     private final TaskService taskService;
@@ -383,15 +381,6 @@ public class ResultService implements Purgeable {
 
     public boolean isResultAvailable(String chainTaskId) {
         return isResultZipFound(chainTaskId);
-    }
-
-    public ComputedFile readComputedFile(String chainTaskId) {
-        ComputedFile computedFile = IexecFileHelper.readComputedFile(chainTaskId,
-                workerConfigService.getTaskOutputDir(chainTaskId));
-        if (computedFile == null) {
-            log.error("Failed to read computed file (computed.json missing) [chainTaskId:{}]", chainTaskId);
-        }
-        return computedFile;
     }
 
     public ComputedFile getComputedFile(String chainTaskId) {

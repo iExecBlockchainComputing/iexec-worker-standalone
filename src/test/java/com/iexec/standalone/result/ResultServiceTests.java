@@ -52,7 +52,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.*;
-import org.springframework.boot.actuate.scheduling.ScheduledTasksEndpoint;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Keys;
@@ -62,7 +61,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -134,10 +132,6 @@ class ResultServiceTests {
     private Credentials enclaveCreds;
     private Credentials schedulerCreds;
     private Signature signature;
-    private String tmp;
-
-    @TempDir
-    public File folderRule;
     private String tmp;
 
     @BeforeEach
