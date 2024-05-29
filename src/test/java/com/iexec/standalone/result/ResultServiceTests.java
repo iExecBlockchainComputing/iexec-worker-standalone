@@ -94,6 +94,7 @@ class ResultServiceTests {
                                                         + File.separator + "tmp"
                                                         + File.separator + "test-worker"
                                                         + File.separator;
+    private static final String TMP_FILE = IEXEC_WORKER_TMP_FOLDER + "computed.zip";
     private static final String CALLBACK = "0x0000000000000000000000000000000000000abc";
 
     private static final String AUTHORIZATION = "0x4";
@@ -127,9 +128,8 @@ class ResultServiceTests {
     private CredentialsService credentialsService;
 
     @InjectMocks
+    @Spy
     private ResultService resultService;
-
-    private ResultService spyResultService;
 
     private Credentials enclaveCreds;
     private Credentials schedulerCreds;
@@ -151,7 +151,6 @@ class ResultServiceTests {
                 .build();
         when(signatureService.getAddress()).thenReturn(schedulerCreds.getAddress());
         tmp = folderRule.getAbsolutePath();
-        spyResultService = spy(resultService);
     }
 
     @Test
@@ -298,25 +297,20 @@ class ResultServiceTests {
     }
 
     @Test
-    void testGetResultModelWithZip() {
+    void testGetResultModelWithZip() throws IOException {
         ResultInfo resultInfo = mock(ResultInfo.class);
         when(resultInfo.getImage()).thenReturn("image");
         when(resultInfo.getCmd()).thenReturn("cmd");
         when(resultInfo.getDeterministHash()).thenReturn("hash");
-
-        doReturn(resultInfo).when(spyResultService).getResultInfos(CHAIN_TASK_ID);
-        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.readAllBytes(any(Path.class))).thenReturn(new byte[]{1, 2, 3});
-
-            ResultModel resultModel = spyResultService.getResultModelWithZip(CHAIN_TASK_ID);
-
-            assertThat(resultModel).isNotNull();
-            assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
-            assertThat(resultModel.getImage()).isEqualTo("image");
-            assertThat(resultModel.getCmd()).isEqualTo("cmd");
-            assertThat(resultModel.getZip()).isEqualTo(new byte[]{1, 2, 3});
-            assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
-        }
+        doReturn(resultInfo).when(resultService).getResultInfos(CHAIN_TASK_ID);
+        doReturn(TMP_FILE).when(resultService).getResultZipFilePath(CHAIN_TASK_ID);
+        ResultModel resultModel = resultService.getResultModelWithZip(CHAIN_TASK_ID);
+        assertThat(resultModel).isNotNull();
+        assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+        assertThat(resultModel.getImage()).isEqualTo("image");
+        assertThat(resultModel.getCmd()).isEqualTo("cmd");
+        assertThat(resultModel.getZip()).isEqualTo(Files.readAllBytes(Paths.get(TMP_FILE)));
+        assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
     }
 
     @Test
@@ -325,37 +319,28 @@ class ResultServiceTests {
         when(resultInfo.getImage()).thenReturn("image");
         when(resultInfo.getCmd()).thenReturn("cmd");
         when(resultInfo.getDeterministHash()).thenReturn("hash");
-
-        doReturn(resultInfo).when(spyResultService).getResultInfos(CHAIN_TASK_ID);
-        try (MockedStatic<Files> mockedFiles = mockStatic(Files.class)) {
-            mockedFiles.when(() -> Files.readAllBytes(any(Path.class))).thenThrow(new IOException("File not found"));
-
-            ResultModel resultModel = spyResultService.getResultModelWithZip(CHAIN_TASK_ID);
-
-            assertThat(resultModel).isNotNull();
-            assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
-            assertThat(resultModel.getImage()).isEqualTo("image");
-            assertThat(resultModel.getCmd()).isEqualTo("cmd");
-            assertThat(resultModel.getZip()).isEqualTo(new byte[0]);
-            assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
-        }
+        doReturn(resultInfo).when(resultService).getResultInfos(CHAIN_TASK_ID);
+        ResultModel resultModel = resultService.getResultModelWithZip(CHAIN_TASK_ID);
+        assertThat(resultModel).isNotNull();
+        assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+        assertThat(resultModel.getImage()).isEqualTo("image");
+        assertThat(resultModel.getCmd()).isEqualTo("cmd");
+        assertThat(resultModel.getZip()).isEqualTo(new byte[0]);
+        assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
     }
 
     @Test
     void testCleanUnusedResultFolders() {
         List<String> recoveredTasks = Arrays.asList("task1", "task2");
-        doReturn(Arrays.asList("task1", "task3")).when(spyResultService).getAllChainTaskIdsInResultFolder();
-        doReturn(true).when(spyResultService).purgeTask("task3");
-        spyResultService.cleanUnusedResultFolders(recoveredTasks);
-        verify(spyResultService, times(1)).purgeTask("task3");
+        doReturn(Arrays.asList("task1", "task3")).when(resultService).getAllChainTaskIdsInResultFolder();
+        doReturn(true).when(resultService).purgeTask("task3");
+        resultService.cleanUnusedResultFolders(recoveredTasks);
+        verify(resultService, times(1)).purgeTask("task3");
     }
 
     @Test
     void testGetAllChainTaskIdsInResultFolder_Empty() {
-        File mockFile = mock(File.class);
-        when(workerConfigurationService.getWorkerBaseDir()).thenReturn("/mock/path");
-        when(mockFile.list(any())).thenReturn(null);
-
+        when(workerConfigurationService.getWorkerBaseDir()).thenReturn(tmp);
         List<String> result = resultService.getAllChainTaskIdsInResultFolder();
 
         assertThat(result).isNotNull();
