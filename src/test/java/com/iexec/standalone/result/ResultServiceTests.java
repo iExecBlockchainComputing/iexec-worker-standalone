@@ -136,6 +136,10 @@ class ResultServiceTests {
     private Signature signature;
     private String tmp;
 
+    @TempDir
+    public File folderRule;
+    private String tmp;
+
     @BeforeEach
     void init() {
         MockitoAnnotations.openMocks(this);
@@ -533,7 +537,7 @@ class ResultServiceTests {
         Assertions.assertThat(resultDigest).isEmpty();
     }
     //endregion
-
+  
     //region writeComputedFile
     @Test
     void shouldWriteComputedFile() throws JsonProcessingException {
