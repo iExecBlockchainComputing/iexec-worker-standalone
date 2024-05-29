@@ -15,6 +15,7 @@ All notable changes to this project will be documented in this file.
 - Setup chain-related classes. (#13)
 - Setup feign-related classes. (#14)
 - Setup sms-related classes. (#15)
+- Setup result-related classes. (#16)
 - Setup compute- and tee-related classes. (#17)
 
 ### Quality

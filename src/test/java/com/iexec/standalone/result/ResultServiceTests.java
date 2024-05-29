@@ -18,15 +18,23 @@ package com.iexec.standalone.result;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iexec.common.replicate.ReplicateStatus;
+import com.iexec.common.replicate.ReplicateStatusCause;
 import com.iexec.common.result.ComputedFile;
+import com.iexec.common.result.ResultModel;
 import com.iexec.common.utils.FileHelper;
 import com.iexec.common.utils.IexecFileHelper;
 import com.iexec.commons.poco.chain.ChainTask;
 import com.iexec.commons.poco.chain.ChainTaskStatus;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
+import com.iexec.commons.poco.eip712.EIP712Domain;
+import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
 import com.iexec.commons.poco.security.Signature;
+import com.iexec.commons.poco.task.TaskDescription;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.HashUtils;
+import com.iexec.standalone.chain.ChainConfig;
+import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.chain.IexecHubService;
 import com.iexec.standalone.chain.SignatureService;
 import com.iexec.standalone.config.WorkerConfigurationService;
@@ -40,26 +48,35 @@ import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.*;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Keys;
 import org.web3j.crypto.Sign;
 
 import java.io.File;
-import java.util.Optional;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.regex.Pattern;
 
+import static com.iexec.commons.poco.chain.DealParams.DROPBOX_RESULT_STORAGE_PROVIDER;
+import static com.iexec.commons.poco.chain.DealParams.IPFS_RESULT_STORAGE_PROVIDER;
 import static com.iexec.commons.poco.tee.TeeUtils.TEE_SCONE_ONLY_TAG;
 import static com.iexec.commons.poco.utils.BytesUtils.EMPTY_ADDRESS;
-import static com.iexec.standalone.task.TaskTestsUtils.CHAIN_TASK_ID;
 import static com.iexec.standalone.task.TaskTestsUtils.getStubTask;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
 
 @Slf4j
 class ResultServiceTests {
@@ -67,9 +84,32 @@ class ResultServiceTests {
     public static final String RESULT_DIGEST = "0x0000000000000000000000000000000000000000000000000000000000000001";
     // 32 + 32 + 1 = 65 bytes
     public static final String ENCLAVE_SIGNATURE = "0x000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000b0c";
-    private static final String IEXEC_WORKER_TMP_FOLDER = "./src/test/resources/tmp/test-worker/";
+    private static final String CHAIN_TASK_ID = "taskId";
+    private static final String CHAIN_TASK_ID_2 = "taskId2";
+    private static final String IEXEC_WORKER_TMP_FOLDER = "src"
+                                                        + File.separator + "test"
+                                                        + File.separator + "resources"
+                                                        + File.separator + "tmp"
+                                                        + File.separator + "test-worker"
+                                                        + File.separator;
+    private static final String TMP_FILE = IEXEC_WORKER_TMP_FOLDER + "computed.zip";
     private static final String CALLBACK = "0x0000000000000000000000000000000000000abc";
 
+    private static final String AUTHORIZATION = "0x4";
+    private static final WorkerpoolAuthorization WORKERPOOL_AUTHORIZATION = WorkerpoolAuthorization.builder()
+            .chainTaskId("0x1")
+            .enclaveChallenge("0x2")
+            .workerWallet("0x3")
+            .build();
+
+    private final String pathSeparator = Pattern.compile("Window")
+                                            .matcher(System.getProperty("os.name"))
+                                            .find() ? File.separator + File.separator : File.separator;
+
+    @TempDir
+    public File folderRule;
+    @Mock
+    private IexecHubService iexecHubService;
     @Mock
     private ResultProxyClient resultProxyClient;
     @Mock
@@ -77,20 +117,21 @@ class ResultServiceTests {
     @Mock
     private TaskService taskService;
     @Mock
-    private IexecHubService iexecHubService;
+    private WorkerpoolAuthorization workerpoolAuthorization;
     @Mock
     private WorkerConfigurationService workerConfigurationService;
+    @Mock
+    private ChainConfig chainConfig;
+    @Mock
+    private CredentialsService credentialsService;
 
     @InjectMocks
+    @Spy
     private ResultService resultService;
 
     private Credentials enclaveCreds;
     private Credentials schedulerCreds;
     private Signature signature;
-    private WorkerpoolAuthorization workerpoolAuthorization;
-
-    @TempDir
-    public File folderRule;
     private String tmp;
 
     @BeforeEach
@@ -168,6 +209,329 @@ class ResultServiceTests {
         return Credentials.create(Keys.createEcKeyPair());
     }
 
+    @Test
+    void testIsResultUploaded() throws Exception {
+        Method method = ResultService.class.getDeclaredMethod("isResultUploaded", FeignException.class, String.class);
+        method.setAccessible(true);
+        FeignException feignException = mock(FeignException.class);
+        boolean result = (boolean) method.invoke(resultService, feignException, CHAIN_TASK_ID);
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void testGetResultFolderPath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getResultFolderPath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER);
+    }
+
+    @Test
+    void testGetResultZipFilePath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getResultZipFilePath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER + ".zip");
+    }
+
+    @Test
+    void testGetEncryptedResultFilePath() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.getEncryptedResultFilePath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER + ".zip");
+    }
+
+    @Test
+    void shouldWriteErrorToIexecOut() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID))
+                .thenReturn(tmp);
+
+        boolean isErrorWritten = resultService.writeErrorToIexecOut(CHAIN_TASK_ID,
+                ReplicateStatus.DATA_DOWNLOAD_FAILED,
+                ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
+
+        Assertions.assertThat(isErrorWritten).isTrue();
+        String errorFileAsString = FileHelper.readFile(tmp + "/"
+                + ResultService.ERROR_FILENAME);
+        Assertions.assertThat(errorFileAsString).contains("[IEXEC] Error occurred while " +
+                "computing the task");
+        String computedFileAsString = FileHelper.readFile(tmp + File.separator
+                + IexecFileHelper.COMPUTED_JSON);
+        Assertions.assertThat(computedFileAsString).isEqualTo("{" +
+                "\"deterministic-output-path\":\"" + pathSeparator + "iexec_out" + pathSeparator + "error.txt\"," +
+                "\"callback-data\":null," +
+                "\"task-id\":null," +
+                "\"result-digest\":null," +
+                "\"enclave-signature\":null," +
+                "\"error-message\":null" +
+                "}");
+    }
+
+    @Test
+    void shouldNotWriteErrorToIexecOutSince() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID))
+                .thenReturn(File.separator + "null");
+
+        boolean isErrorWritten = resultService.writeErrorToIexecOut(CHAIN_TASK_ID,
+                ReplicateStatus.DATA_DOWNLOAD_FAILED,
+                ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
+
+        Assertions.assertThat(isErrorWritten).isFalse();
+    }
+
+    @Test
+    void testSaveResultInfo() {
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        ComputedFile computedFile = mock(ComputedFile.class);
+
+        when(taskDescription.getAppUri()).thenReturn("appUri");
+        when(taskDescription.getCmd()).thenReturn("cmd");
+        when(computedFile.getResultDigest()).thenReturn("digest");
+        when(taskDescription.getDatasetUri()).thenReturn("datasetUri");
+
+        resultService.saveResultInfo(CHAIN_TASK_ID, taskDescription, computedFile);
+
+        ResultInfo resultInfo = resultService.getResultInfos(CHAIN_TASK_ID);
+        assertThat(resultInfo).isNotNull();
+        assertThat(resultInfo.getImage()).isEqualTo("appUri");
+        assertThat(resultInfo.getCmd()).isEqualTo("cmd");
+        assertThat(resultInfo.getDeterministHash()).isEqualTo("digest");
+        assertThat(resultInfo.getDatasetUri()).isEqualTo("datasetUri");
+    }
+
+    @Test
+    void testGetResultModelWithZip() throws IOException {
+        ResultInfo resultInfo = mock(ResultInfo.class);
+        when(resultInfo.getImage()).thenReturn("image");
+        when(resultInfo.getCmd()).thenReturn("cmd");
+        when(resultInfo.getDeterministHash()).thenReturn("hash");
+        doReturn(resultInfo).when(resultService).getResultInfos(CHAIN_TASK_ID);
+        doReturn(TMP_FILE).when(resultService).getResultZipFilePath(CHAIN_TASK_ID);
+        ResultModel resultModel = resultService.getResultModelWithZip(CHAIN_TASK_ID);
+        assertThat(resultModel).isNotNull();
+        assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+        assertThat(resultModel.getImage()).isEqualTo("image");
+        assertThat(resultModel.getCmd()).isEqualTo("cmd");
+        assertThat(resultModel.getZip()).isEqualTo(Files.readAllBytes(Paths.get(TMP_FILE)));
+        assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
+    }
+
+    @Test
+    void testGetResultModelWithZip_FileNotFound() {
+        ResultInfo resultInfo = mock(ResultInfo.class);
+        when(resultInfo.getImage()).thenReturn("image");
+        when(resultInfo.getCmd()).thenReturn("cmd");
+        when(resultInfo.getDeterministHash()).thenReturn("hash");
+        doReturn(resultInfo).when(resultService).getResultInfos(CHAIN_TASK_ID);
+        ResultModel resultModel = resultService.getResultModelWithZip(CHAIN_TASK_ID);
+        assertThat(resultModel).isNotNull();
+        assertThat(resultModel.getChainTaskId()).isEqualTo(CHAIN_TASK_ID);
+        assertThat(resultModel.getImage()).isEqualTo("image");
+        assertThat(resultModel.getCmd()).isEqualTo("cmd");
+        assertThat(resultModel.getZip()).isEqualTo(new byte[0]);
+        assertThat(resultModel.getDeterministHash()).isEqualTo("hash");
+    }
+
+    @Test
+    void testCleanUnusedResultFolders() {
+        List<String> recoveredTasks = Arrays.asList("task1", "task2");
+        doReturn(Arrays.asList("task1", "task3")).when(resultService).getAllChainTaskIdsInResultFolder();
+        doReturn(true).when(resultService).purgeTask("task3");
+        resultService.cleanUnusedResultFolders(recoveredTasks);
+        verify(resultService, times(1)).purgeTask("task3");
+    }
+
+    @Test
+    void testGetAllChainTaskIdsInResultFolder_Empty() {
+        when(workerConfigurationService.getWorkerBaseDir()).thenReturn(tmp);
+        List<String> result = resultService.getAllChainTaskIdsInResultFolder();
+
+        assertThat(result).isNotNull();
+        assertThat(result.isEmpty()).isTrue();
+    }
+
+    @Test
+    void testUploadResultAndGetLinkCallback() {
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(true);
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
+        assertThat(resultLink).isEqualTo("{ \"storage\": \"ethereum\", \"location\": \"null\" }");
+    }
+
+    @Test
+    void testUploadResultAndGetLinkTeeTask() {
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(false);
+        when(taskDescription.isTeeTask()).thenReturn(true);
+        when(taskDescription.getResultStorageProvider()).thenReturn("dropbox");
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
+        assertThat(resultLink).isEqualTo("{ \"storage\": \"dropbox\", \"location\": \"/results/" + CHAIN_TASK_ID + "\" }");
+    }
+
+    @Test
+    void testNotUploadResultAndGetLink() {
+        WorkerpoolAuthorization wpAuthorization = mock(WorkerpoolAuthorization.class);
+        TaskDescription taskDescription = mock(TaskDescription.class);
+        when(wpAuthorization.getChainTaskId()).thenReturn(CHAIN_TASK_ID);
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(taskDescription);
+        when(taskDescription.containsCallback()).thenReturn(false);
+        when(taskDescription.isTeeTask()).thenReturn(false);
+        when(taskDescription.getResultStorageProvider()).thenReturn("notIpfs");
+        String resultLink = resultService.uploadResultAndGetLink(wpAuthorization);
+        assertThat(resultLink).isEmpty();
+    }
+
+    @Test
+    void shouldGetTeeWeb2ResultLinkSinceIpfs() {
+        String storage = IPFS_RESULT_STORAGE_PROVIDER;
+        String ipfsHash = "QmcipfsHash";
+
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(
+                TaskDescription.builder().resultStorageProvider(storage).build());
+        when(resultProxyClient.getIpfsHashForTask(CHAIN_TASK_ID)).thenReturn(ipfsHash);
+
+        String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
+
+        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/ipfs/" + ipfsHash));
+    }
+
+    @Test
+    void shouldGetTeeWeb2ResultLinkSinceDropbox() {
+        String storage = DROPBOX_RESULT_STORAGE_PROVIDER;
+
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(
+                TaskDescription.builder().resultStorageProvider(storage).build());
+
+        String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
+
+        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/results/" + CHAIN_TASK_ID));
+    }
+
+    @Test
+    void shouldNotGetTeeWeb2ResultLinkSinceBadStorage() {
+        String storage = "some-unsupported-third-party-storage";
+
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(
+                TaskDescription.builder().resultStorageProvider(storage).build());
+
+        String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
+
+        Assertions.assertThat(resultLink).isEmpty();
+    }
+
+
+    @Test
+    void shouldNotGetTeeWeb2ResultLinkSinceNoTask() {
+        when(iexecHubService.getTaskDescription(CHAIN_TASK_ID)).thenReturn(null);
+
+        String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
+
+        Assertions.assertThat(resultLink).isEmpty();
+    }
+
+    //region getComputedFile
+    @Test
+    void shouldGetComputedFileWithWeb2ResultDigestSinceFile() {
+        String chainTaskId = "deterministic-output-file";
+
+        when(workerConfigurationService.getTaskIexecOutDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId +
+                        File.separator + "output" + File.separator + "iexec_out");
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId +
+                        File.separator + "output");
+        when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
+                TaskDescription.builder().callback(BytesUtils.EMPTY_ADDRESS).build());
+
+        ComputedFile computedFile =
+                resultService.getComputedFile(chainTaskId);
+        String hash = computedFile.getResultDigest();
+        // should be equal to the content of the file since it is a byte32
+        Assertions.assertThat(hash).isEqualTo(
+                "0x09b727883db89fa3b3504f83e0c67d04a0d4fc35a9670cc4517c49d2a27ad171");
+    }
+
+    @Test
+    void shouldGetComputedFileWithWeb2ResultDigestSinceFileTree() {
+        String chainTaskId = "deterministic-output-directory";
+
+        when(workerConfigurationService.getTaskIexecOutDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId +
+                        "/output/iexec_out");
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId +
+                        "/output");
+        when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
+                TaskDescription.builder().callback(BytesUtils.EMPTY_ADDRESS).build());
+
+        ComputedFile computedFile =
+                resultService.getComputedFile(chainTaskId);
+        String hash = computedFile.getResultDigest();
+        log.info(hash);
+        // should be equal to the content of the file since it is a byte32
+        Assertions.assertThat(hash).isEqualTo(
+                "0xc6114778cc5c33db5fbbd4d0f9be116ed0232961045341714aba5a72d3ef7402");
+    }
+
+    @Test
+    void shouldGetComputedFileWithWeb3ResultDigest() {
+        String chainTaskId = "callback-directory";
+
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId + "/output");
+        when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
+                TaskDescription.builder().callback(CALLBACK).build());
+
+        ComputedFile computedFile =
+                resultService.getComputedFile(chainTaskId);
+        String hash = computedFile.getResultDigest();
+        log.info(hash);
+        // should be equal to the content of the file since it is a byte32
+        Assertions.assertThat(hash).isEqualTo(
+                "0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6");
+    }
+
+    @Test
+    void shouldNotGetComputedFileWhenFileNotFound() {
+        String chainTaskId = "does-not-exist";
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId + "/output");
+        ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
+        Assertions.assertThat(computedFile).isNull();
+    }
+
+    @Test
+    void shouldNotComputeWeb2ResultDigestWhenFileTreeNotFound() {
+        String chainTaskId = "deterministic-output-directory-missing";
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId + File.separator + "output");
+        when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
+                TaskDescription.builder().callback(BytesUtils.EMPTY_ADDRESS).build());
+        ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
+        Assertions.assertThat(computedFile).isNull();
+        computedFile = resultService.readComputedFile(chainTaskId);
+        Assertions.assertThat(computedFile).isNotNull();
+        String resultDigest = resultService.computeResultDigest(computedFile);
+        Assertions.assertThat(resultDigest).isEmpty();
+    }
+
+    @Test
+    void shouldNotComputeWeb3ResultDigestWhenNoCallbackData() {
+        String chainTaskId = "callback-no-data";
+        when(workerConfigurationService.getTaskOutputDir(chainTaskId))
+                .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId + "/output");
+        when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
+                TaskDescription.builder().callback(CALLBACK).build());
+        ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
+        Assertions.assertThat(computedFile).isNull();
+        computedFile = resultService.readComputedFile(chainTaskId);
+        Assertions.assertThat(computedFile).isNotNull();
+        String resultDigest = resultService.computeResultDigest(computedFile);
+        Assertions.assertThat(resultDigest).isEmpty();
+    }
+    //endregion
+  
     //region writeComputedFile
     @Test
     void shouldWriteComputedFile() throws JsonProcessingException {
@@ -393,7 +757,7 @@ class ResultServiceTests {
                 .thenReturn(Optional.of(ChainTask.builder()
                         .status(ChainTaskStatus.ACTIVE).build()));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
-                .thenReturn(":somewhere");
+                .thenReturn("somewhere");
         when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
@@ -401,4 +765,199 @@ class ResultServiceTests {
         Assertions.assertThat(isWritten).isFalse();
     }
     //endregion
+
+    //region getIexecUploadToken
+    @Test
+    void shouldGetIexecUploadTokenFromWorkerpoolAuthorization() {
+        final String uploadToken = "uploadToken";
+        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(AUTHORIZATION));
+        when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenReturn(uploadToken);
+        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
+        verify(credentialsService).hashAndSignMessage(anyString());
+        verify(resultProxyClient).getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION);
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenWorkerpoolAuthorizationSinceSigningReturnsEmpty() {
+        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(""));
+        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+        verify(credentialsService).hashAndSignMessage(anyString());
+        verifyNoInteractions(resultProxyClient);
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenFromWorkerpoolAuthorizationSinceFeignException() {
+        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(AUTHORIZATION));
+        when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenThrow(FeignException.Unauthorized.class);
+        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+    }
+
+    @Test
+    void shouldGetIexecUploadToken() {
+        final int chainId = 1;
+        final EIP712Domain domain = spy(new EIP712Domain("iExec Result Repository", "1", chainId, null));
+        final EIP712Challenge challenge = spy(new EIP712Challenge(domain, null));
+        final String signedChallenge = "signedChallenge";
+        final String uploadToken = "uploadToken";
+
+        when(chainConfig.getChainId()).thenReturn(chainId);
+        when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
+        when(credentialsService.signEIP712EntityAndBuildToken(challenge)).thenReturn(signedChallenge);
+        when(resultProxyClient.login(chainId, signedChallenge)).thenReturn(uploadToken);
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(chainId);
+        verify(credentialsService, times(1)).signEIP712EntityAndBuildToken(challenge);
+        verify(resultProxyClient, times(1)).login(chainId, signedChallenge);
+
+        verify(challenge, times(1)).getDomain();
+        verify(domain, times(1)).getName();
+        verify(domain, times(1)).getChainId();
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenSinceNoResultChallenge() {
+        final int chainId = 1;
+
+        when(chainConfig.getChainId()).thenReturn(chainId);
+        when(resultProxyClient.getChallenge(chainId)).thenReturn(null);
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(chainId);
+        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(resultProxyClient, never()).login(anyInt(), any());
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenSinceGetResultChallengeThrows() {
+        final int chainId = 1;
+
+        when(chainConfig.getChainId()).thenReturn(chainId);
+        when(resultProxyClient.getChallenge(chainId)).thenThrow(RuntimeException.class);
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(chainId);
+        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(resultProxyClient, never()).login(anyInt(), any());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "wrong name"})
+    void shouldNotGetIexecUploadTokenSinceWrongDomainName(String wrongDomainName) {
+        final int chainId = 1;
+        final EIP712Domain domain = spy(new EIP712Domain(wrongDomainName, "1", chainId, null));
+        final EIP712Challenge challenge = spy(new EIP712Challenge(domain, null));
+
+        when(chainConfig.getChainId()).thenReturn(chainId);
+        when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(chainId);
+        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(resultProxyClient, never()).login(anyInt(), any());
+
+        verify(challenge, times(1)).getDomain();
+        verify(domain, times(1)).getName();
+        verify(domain, times(0)).getChainId();
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenSinceWrongChainId() {
+        final int expectedChainId = 1;
+        final long wrongChainId = 42;
+        final EIP712Domain domain = spy(new EIP712Domain("iExec Result Repository", "1", wrongChainId, null));
+        final EIP712Challenge challenge = spy(new EIP712Challenge(domain, null));
+
+        when(chainConfig.getChainId()).thenReturn(expectedChainId);
+        when(resultProxyClient.getChallenge(expectedChainId)).thenReturn(challenge);
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(expectedChainId);
+        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(resultProxyClient, never()).login(anyInt(), any());
+
+        verify(challenge, times(1)).getDomain();
+        verify(domain, times(1)).getName();
+        verify(domain, times(1)).getChainId();
+    }
+
+    @Test
+    void shouldNotGetIexecUploadTokenSinceSigningReturnsEmpty() {
+        final int chainId = 1;
+        final EIP712Domain domain = spy(new EIP712Domain("iExec Result Repository", "1", chainId, null));
+        final EIP712Challenge challenge = spy(new EIP712Challenge(domain, null));
+
+        when(chainConfig.getChainId()).thenReturn(chainId);
+        when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
+        when(credentialsService.signEIP712EntityAndBuildToken(challenge)).thenReturn("");
+
+        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+
+        verify(chainConfig, times(1)).getChainId();
+        verify(resultProxyClient, times(1)).getChallenge(chainId);
+        verify(credentialsService, times(1)).signEIP712EntityAndBuildToken(challenge);
+        verify(resultProxyClient, never()).login(anyInt(), any());
+
+        verify(challenge, times(1)).getDomain();
+        verify(domain, times(1)).getName();
+        verify(domain, times(1)).getChainId();
+    }
+    //endregion
+
+    // region purgeTask
+    @Test
+    void shouldPurgeTask() {
+        when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID))
+                .thenReturn(tmp);
+
+        Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+                .isTrue();
+    }
+
+    @Test
+    void shouldNotPurgeTaskSinceDirDeletionFailed() {
+        when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID))
+                .thenReturn(tmp);
+
+        try (MockedStatic<FileHelper> fileHelper = Mockito.mockStatic(FileHelper.class)) {
+            fileHelper.when(() -> FileHelper.deleteFolder(tmp))
+                    .thenReturn(false);
+
+            Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+                    .isFalse();
+        }
+    }
+    // endregion
+
+    // region purgeAllTasksData
+    @Test
+    void shouldPurgeAllTasksData() {
+        final Map<String, ResultInfo> resultInfoMap = new HashMap<>(Map.of(
+                CHAIN_TASK_ID, ResultInfo.builder().build(),
+                CHAIN_TASK_ID_2, ResultInfo.builder().build()
+        ));
+        ReflectionTestUtils.setField(resultService, "resultInfoMap", resultInfoMap);
+
+        when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID))
+                .thenReturn(tmp);
+        when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID_2))
+                .thenReturn(tmp);
+
+        resultService.purgeAllTasksData();
+
+        Assertions.assertThat(resultInfoMap).isEmpty();
+        Assertions.assertThat(new File(tmp)).doesNotExist();
+    }
+    // endregion
 }
