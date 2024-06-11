@@ -21,6 +21,7 @@ import com.iexec.commons.poco.tee.TeeEnclaveChallengeSignature;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.EthAddress;
 import com.iexec.commons.poco.utils.SignatureUtils;
+import com.iexec.commons.poco.utils.EthAddress;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
