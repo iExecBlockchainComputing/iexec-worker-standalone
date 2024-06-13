@@ -27,7 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -43,6 +43,7 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.*;
 
 @Slf4j
+@ExtendWith(MockitoExtension.class)
 @ExtendWith(OutputCaptureExtension.class)
 class TaskUpdateRequestManagerTests {
 
@@ -55,11 +56,6 @@ class TaskUpdateRequestManagerTests {
 
     @InjectMocks
     private TaskUpdateRequestManager taskUpdateRequestManager;
-
-    @BeforeEach
-    void init() {
-        MockitoAnnotations.openMocks(this);
-    }
 
     // region publishRequest()
     @Test
@@ -105,8 +101,6 @@ class TaskUpdateRequestManagerTests {
 
     @Test
     void shouldNotPublishRequestSinceItemAlreadyAdded() {
-        when(taskService.getTaskByChainTaskId(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(Task.builder().chainTaskId(CHAIN_TASK_ID).build()));
         taskUpdateRequestManager.queue.add(
                 buildTaskUpdate(CHAIN_TASK_ID, null, null, null)
         );
@@ -114,7 +108,7 @@ class TaskUpdateRequestManagerTests {
         final boolean publishRequestStatus = taskUpdateRequestManager.publishRequest(CHAIN_TASK_ID);
 
         assertThat(publishRequestStatus).isFalse();
-        verifyNoInteractions(taskUpdateManager);
+        verifyNoInteractions(taskService, taskUpdateManager);
     }
 
     @Test
