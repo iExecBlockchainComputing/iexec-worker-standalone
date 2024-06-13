@@ -215,7 +215,9 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
         log.info("Requested reopen [chainTaskId:{}, waitingTxCount:{}]", chainTaskId, getWaitingTransactionCount());
         try {
             return CompletableFuture.supplyAsync(() -> sendReopenTransaction(chainTaskId), executor).get();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (ExecutionException e) {
             log.error("reOpen asynchronous execution did not complete", e);
         }
         return Optional.empty();
