@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2020-2024 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.iexec.standalone.feign;
 import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.standalone.feign.client.CoreClient;
+import com.iexec.standalone.api.SchedulerClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -36,11 +36,11 @@ public class LoginService {
     static final String TOKEN_PREFIX = "Bearer ";
     private String jwtToken;
 
+    private final SchedulerClient coreClient;
     private final SignerService signerService;
-    private final CoreClient coreClient;
     private final ReentrantLock lock = new ReentrantLock();
 
-    LoginService(SignerService signerService, CoreClient coreClient) {
+    LoginService(SignerService signerService, SchedulerClient coreClient) {
         this.signerService = signerService;
         this.coreClient = coreClient;
     }

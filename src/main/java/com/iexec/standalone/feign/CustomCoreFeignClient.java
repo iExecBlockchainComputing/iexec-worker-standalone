@@ -19,10 +19,10 @@ package com.iexec.standalone.feign;
 import com.iexec.common.config.PublicConfiguration;
 import com.iexec.common.config.WorkerModel;
 import com.iexec.common.replicate.ReplicateStatusUpdate;
-import com.iexec.standalone.feign.client.CoreClient;
-import com.iexec.standalone.replicate.ReplicateTaskSummary;
+import com.iexec.standalone.api.SchedulerClient;
 import com.iexec.standalone.notification.TaskNotification;
 import com.iexec.standalone.notification.TaskNotificationType;
+import com.iexec.standalone.replicate.ReplicateTaskSummary;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -39,9 +39,9 @@ public class CustomCoreFeignClient extends BaseFeignClient {
     public static final String JWTOKEN = "jwtoken";
     public static final String BLOCK_NUMBER = "blockNumber";
     private final LoginService loginService;
-    private final CoreClient coreClient;
+    private final SchedulerClient coreClient;
 
-    public CustomCoreFeignClient(CoreClient coreClient, LoginService loginService) {
+    public CustomCoreFeignClient(SchedulerClient coreClient, LoginService loginService) {
         this.loginService = loginService;
         this.coreClient = coreClient;
     }

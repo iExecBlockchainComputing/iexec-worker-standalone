@@ -18,7 +18,7 @@ package com.iexec.standalone.feign;
 
 import com.iexec.common.replicate.ReplicateStatus;
 import com.iexec.common.replicate.ReplicateStatusUpdate;
-import com.iexec.standalone.feign.client.CoreClient;
+import com.iexec.standalone.api.SchedulerClient;
 import com.iexec.standalone.notification.TaskNotificationType;
 import com.iexec.standalone.replicate.ReplicateTaskSummary;
 import feign.FeignException;
@@ -46,7 +46,7 @@ class CustomCoreFeignClientTests {
     @Mock
     private LoginService loginService;
     @Mock
-    private CoreClient coreClient;
+    private SchedulerClient coreClient;
     @InjectMocks
     private CustomCoreFeignClient customCoreFeignClient;
 
