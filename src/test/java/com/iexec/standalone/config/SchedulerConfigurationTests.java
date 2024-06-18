@@ -23,30 +23,13 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-class CoreConfigurationServiceTests {
-
+class SchedulerConfigurationTests {
     private final ApplicationContextRunner runner = new ApplicationContextRunner();
 
     @Test
     void shouldCreateBeanInstance() {
         runner.withPropertyValues("core.protocol=http", "core.host=localhost", "core.port=13000")
-                .withConfiguration(UserConfigurations.of(CoreConfigurationService.class))
+                .withConfiguration(UserConfigurations.of(SchedulerConfiguration.class))
                 .run(context -> assertThat(context).hasSingleBean(SchedulerClient.class));
     }
-
-    @Test
-    void testGuetters() {
-        runner.withPropertyValues("core.protocol=http", "core.host=localhost", "core.port=13000")
-                .withConfiguration(UserConfigurations.of(CoreConfigurationService.class))
-                .run(context -> {
-                        assertThat(context.getBean(CoreConfigurationService.class).getUrl()).isEqualTo("http://localhost:13000");
-                        assertThat(context.getBean(CoreConfigurationService.class).getProtocol()).isEqualTo("http");
-                        assertThat(context.getBean(CoreConfigurationService.class).getHost()).isEqualTo("localhost");
-                        assertThat(context.getBean(CoreConfigurationService.class).getPort()).isEqualTo(13000);
-                        context.getBean(CoreConfigurationService.class).setCoreSessionId("coreSessionId");
-                        assertThat(context.getBean(CoreConfigurationService.class).getCoreSessionId()).isEqualTo("coreSessionId");
-                    }
-        );
-    }
-
 }

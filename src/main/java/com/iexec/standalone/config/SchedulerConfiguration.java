@@ -21,59 +21,33 @@ import com.iexec.standalone.api.SchedulerClientBuilder;
 import feign.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.stereotype.Service;
+import org.springframework.context.annotation.Configuration;
 
 import javax.annotation.PostConstruct;
 import java.net.MalformedURLException;
 import java.net.URL;
 
-@Service
-public class CoreConfigurationService {
+@Configuration
+public class SchedulerConfiguration {
 
-    @Value("${core.protocol}")
-    private String coreProtocol;
+    @private final String protocol;
+    private final String host;
+    private final String port;
 
-    @Value("${core.host}")
-    private String coreHost;
-
-    @Value("${core.port}")
-    private String corePort;
-
-    private URL url;
-
-    private String coreSessionId;
-
-    @PostConstruct
-    public void run() throws MalformedURLException {
-        url = new URL(coreProtocol, coreHost, Integer.parseInt(corePort), "");
+    public SchedulerConfiguration(@Value("${core.protocol}") String protocol,
+                                  @Value("${core.host}") String host,
+                                  @Value("${core.port}") String port) {
+        this.protocol = protocol;
+        this.host = host;
+        this.port = port;
     }
 
     public String getUrl() {
-        return url.toString();
-    }
-
-    public String getProtocol() {
-        return url.getProtocol();
-    }
-
-    public String getHost() {
-        return url.getHost();
-    }
-
-    public int getPort() {
-        return url.getPort();
-    }
-
-    public String getCoreSessionId() {
-        return coreSessionId;
-    }
-
-    public void setCoreSessionId(String coreSessionId) {
-        this.coreSessionId = coreSessionId;
+        return String.format("%s://%s:%s", protocol, host, port);
     }
 
     @Bean
     SchedulerClient schedulerClient() {
-        return SchedulerClientBuilder.getInstance(Logger.Level.FULL, url.toString());
+        return SchedulerClientBuilder.getInstance(Logger.Level.FULL, getUrl());
     }
 }
