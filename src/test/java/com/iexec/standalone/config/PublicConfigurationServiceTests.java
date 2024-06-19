@@ -28,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-
 class PublicConfigurationServiceTests {
     @Mock
     private SchedulerClient schedulerClient;
