@@ -447,6 +447,7 @@ public class ResultService implements Purgeable {
                     chainTaskId, computedFile);
             return false;
         }
+
         try {
             String json = mapper.writeValueAsString(computedFile);
             Files.write(Paths.get(computedFilePath), json.getBytes());

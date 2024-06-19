@@ -16,7 +16,6 @@
 
 package com.iexec.standalone.chain;
 
-import com.iexec.commons.utils.EthAddress;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.tee.TeeEnclaveChallengeSignature;
 import com.iexec.commons.poco.utils.BytesUtils;
