@@ -17,11 +17,11 @@
 package com.iexec.standalone.feign;
 
 import com.iexec.common.config.WorkerModel;
+import com.iexec.common.replicate.ReplicateStatusUpdate;
 import com.iexec.standalone.api.SchedulerClient;
 import com.iexec.standalone.config.PublicConfiguration;
 import com.iexec.standalone.notification.TaskNotification;
 import com.iexec.standalone.notification.TaskNotificationType;
-import com.iexec.standalone.replicate.ReplicateStatusUpdate;
 import com.iexec.standalone.replicate.ReplicateTaskSummary;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;

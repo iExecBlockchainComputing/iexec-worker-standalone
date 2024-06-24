@@ -24,17 +24,18 @@ import com.iexec.commons.poco.utils.BytesUtils;
 import io.reactivex.Flowable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.web3j.protocol.core.RemoteCall;
+import org.web3j.protocol.core.methods.response.Log;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.datatypes.Event;
 import org.web3j.protocol.core.DefaultBlockParameter;
-import org.web3j.protocol.core.RemoteCall;
 import org.web3j.protocol.core.methods.request.EthFilter;
-import org.web3j.protocol.core.methods.response.Log;
-import org.web3j.protocol.core.methods.response.TransactionReceipt;
 
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
+import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -54,17 +55,19 @@ import static com.iexec.commons.poco.utils.BytesUtils.stringToBytes;
 public class IexecHubService extends IexecHubAbstractService implements Purgeable {
 
     private static final String PENDING_RECEIPT_STATUS = "pending";
-    private final ThreadPoolExecutor executor;
     private final SignerService signerService;
+    private final ThreadPoolExecutor executor;
     private final Web3jService web3jService;
 
+    @Autowired
     public IexecHubService(SignerService signerService,
                            Web3jService web3jService,
                            ChainConfig chainConfig) {
-        super(
-                signerService.getCredentials(),
+        super(signerService.getCredentials(),
                 web3jService,
-                chainConfig.getHubAddress());
+                chainConfig.getHubAddress(),
+                1,
+                5);
         this.signerService = signerService;
         this.web3jService = web3jService;
         this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
@@ -232,7 +235,7 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
             return Optional.empty();
         }
 
-        List<TaskReopenEventResponse> eventsList = IexecHubContract.getTaskReopenEvents(receipt);
+        List<IexecHubContract.TaskReopenEventResponse> eventsList = IexecHubContract.getTaskReopenEvents(receipt);
         if (eventsList.isEmpty()) {
             log.error("Failed to get reopen event [chainTaskId:{}]", chainTaskId);
             return Optional.empty();
@@ -248,7 +251,7 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
         return executor.getTaskCount() - executor.getCompletedTaskCount();
     }
 
-    Flowable<SchedulerNoticeEventResponse> getDealEventObservable(EthFilter filter) {
+    Flowable<IexecHubContract.SchedulerNoticeEventResponse> getDealEventObservable(EthFilter filter) {
         return iexecHubContract.schedulerNoticeEventFlowable(filter);
     }
 
