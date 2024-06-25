@@ -1268,7 +1268,7 @@ class TaskUpdateManagerTest {
         when(iexecHubService.hasEnoughGas()).thenReturn(true);
         when(blockchainAdapterService.requestFinalize(any(), any(), any())).thenReturn(Optional.empty());
         when(iexecHubService.getChainTask(CHAIN_TASK_ID)).thenReturn(Optional.of(ChainTask.builder()
-                .status(ChainTaskStatus.FAILLED)
+                .status(ChainTaskStatus.FAILED)
                 .revealCounter(1)
                 .build()));
 

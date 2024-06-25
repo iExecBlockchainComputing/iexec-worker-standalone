@@ -16,6 +16,7 @@
 
 package com.iexec.standalone.chain;
 
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.BytesUtils;
@@ -33,7 +34,8 @@ import static org.mockito.Mockito.when;
 
 class SignatureServiceTests {
 
-    @Mock private CredentialsService credentialsService;
+    @Mock
+    private SignerService signerService;
 
     @InjectMocks
     private SignatureService signatureService;
@@ -63,7 +65,7 @@ class SignatureServiceTests {
         String enclaveChallenge = "0x9a43BB008b7A657e1936ebf5d8e28e5c5E021596";
         String privateKey = "0x2a46e8c1535792f6689b10d5c882c9363910c30751ec193ae71ec71630077909";
 
-        when(credentialsService.getCredentials()).thenReturn(Credentials.create(privateKey));
+        when(signerService.getCredentials()).thenReturn(Credentials.create(privateKey));
 
         // creation
         WorkerpoolAuthorization authorization = signatureService.createAuthorization(workerWallet, chainTaskid, enclaveChallenge);

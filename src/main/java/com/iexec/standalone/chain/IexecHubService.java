@@ -55,17 +55,17 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
 
     private static final String PENDING_RECEIPT_STATUS = "pending";
     private final ThreadPoolExecutor executor;
-    private final CredentialsService credentialsService;
+    private final SignerService signerService;
     private final Web3jService web3jService;
 
-    public IexecHubService(CredentialsService credentialsService,
+    public IexecHubService(SignerService signerService,
                            Web3jService web3jService,
                            ChainConfig chainConfig) {
         super(
-                credentialsService.getCredentials(),
+                signerService.getCredentials(),
                 web3jService,
                 chainConfig.getHubAddress());
-        this.credentialsService = credentialsService;
+        this.signerService = signerService;
         this.web3jService = web3jService;
         this.executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
         if (!hasEnoughGas()) {
@@ -251,7 +251,7 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
     }
 
     public boolean hasEnoughGas() {
-        final boolean hasEnoughGas = hasEnoughGas(credentialsService.getCredentials().getAddress());
+        final boolean hasEnoughGas = hasEnoughGas(signerService.getAddress());
         log.debug("Gas status [hasEnoughGas:{}]", hasEnoughGas);
         return hasEnoughGas;
     }
@@ -447,7 +447,7 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
         List<IexecHubContract.TaskContributeEventResponse> contributeEvents =
                 IexecHubContract.getTaskContributeEvents(contributeReceipt).stream()
                         .filter(event -> Objects.equals(bytesToString(event.taskid), chainTaskId)
-                                && Objects.equals(event.worker, credentialsService.getCredentials().getAddress()))
+                                && Objects.equals(event.worker, signerService.getAddress()))
                         .collect(Collectors.toList());
         log.debug("contributeEvents count {} [chainTaskId: {}]", contributeEvents.size(), chainTaskId);
 
@@ -482,7 +482,7 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
         List<IexecHubContract.TaskRevealEventResponse> revealEvents =
                 IexecHubContract.getTaskRevealEvents(revealReceipt).stream()
                         .filter(event -> Objects.equals(bytesToString(event.taskid), chainTaskId)
-                                && Objects.equals(event.worker, credentialsService.getCredentials().getAddress()))
+                                && Objects.equals(event.worker, signerService.getAddress()))
                         .collect(Collectors.toList());
         log.debug("revealEvents count {} [chainTaskId:{}]", revealEvents.size(), chainTaskId);
 
@@ -593,11 +593,11 @@ public class IexecHubService extends IexecHubAbstractService implements Purgeabl
     // endregion
 
     Optional<ChainContribution> getChainContribution(String chainTaskId) {
-        return getChainContribution(chainTaskId, credentialsService.getCredentials().getAddress());
+        return getChainContribution(chainTaskId, signerService.getAddress());
     }
 
     Optional<ChainAccount> getChainAccount() {
-        return getChainAccount(credentialsService.getCredentials().getAddress());
+        return getChainAccount(signerService.getAddress());
     }
 
     public long getLatestBlockNumber() {

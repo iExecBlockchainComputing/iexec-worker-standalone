@@ -16,25 +16,23 @@
 
 package com.iexec.standalone.configuration;
 
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.standalone.chain.ChainConfig;
-import com.iexec.standalone.chain.CredentialsService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.web3j.crypto.Credentials;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
 class PublicConfigurationServiceTests {
     @Mock
     private ChainConfig chainConfig;
     @Mock
-    private CredentialsService credentialsService;
+    private SignerService signerService;
     @Mock
     private WorkerConfiguration workerConfiguration;
     @Mock
@@ -44,12 +42,6 @@ class PublicConfigurationServiceTests {
 
     @InjectMocks
     private PublicConfigurationService publicConfigurationService;
-
-    @BeforeEach
-    void init() {
-        MockitoAnnotations.openMocks(this);
-        when(credentialsService.getCredentials()).thenReturn(mock(Credentials.class));
-    }
 
     // region getPublicConfiguration
     @Test

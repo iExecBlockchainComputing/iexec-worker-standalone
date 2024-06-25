@@ -18,9 +18,20 @@ All notable changes to this project will be documented in this file.
 - Setup result-related classes. (#16)
 - Setup compute- and tee-related classes. (#17)
 
+# Bug Fixes
+
+- Use latest released libraries and perform minimal updates to build the project. (#23)
+
 ### Quality
 
 - Add warning in `README.md`. (#6)
 - Update base code to match new Scheduler version. (#8, #9)
 
 ### Dependency Upgrade
+
+- Upgrade to `iexec-commons-poco` 4.1.0. (#23)
+- Upgrade to `iexec-common` 8.5.0. (#23)
+- Upgrade to `iexec-commons-containers` 1.2.2. (#23)
+- Upgrade to `iexec-blockchain-adapter-api-library` 8.5.0. (#23)
+- Upgrade to `iexec-result-proxy-library` 8.5.0. (#23)
+- Upgrade to `iexec-sms-library` 8.6.0. (#23)

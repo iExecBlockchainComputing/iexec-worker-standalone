@@ -29,13 +29,13 @@ import com.iexec.common.utils.IexecFileHelper;
 import com.iexec.common.worker.result.ResultUtils;
 import com.iexec.commons.poco.chain.ChainTask;
 import com.iexec.commons.poco.chain.ChainTaskStatus;
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.eip712.EIP712Domain;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
 import com.iexec.commons.poco.task.TaskDescription;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.standalone.chain.ChainConfig;
-import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.chain.IexecHubService;
 import com.iexec.standalone.chain.SignatureService;
 import com.iexec.standalone.config.WorkerConfigurationService;
@@ -72,7 +72,7 @@ public class ResultService implements Purgeable {
     private final TaskService taskService;
     private final WorkerConfigurationService workerConfigService;
     private final ChainConfig chainConfig;
-    private final CredentialsService credentialsService;
+    private final SignerService signerService;
     private final IexecHubService iexecHubService;
     private final Map<String, ResultInfo> resultInfoMap
             = ExpiringTaskMapFactory.getExpiringTaskMap();
@@ -82,14 +82,14 @@ public class ResultService implements Purgeable {
                          final TaskService taskService,
                          WorkerConfigurationService workerConfigService,
                          ChainConfig chainConfig,
-                         CredentialsService credentialsService,
+                         SignerService signerService,
                          IexecHubService iexecHubService) {
         this.resultProxyClient = resultProxyClient;
         this.signatureService = signatureService;
         this.taskService = taskService;
         this.workerConfigService = workerConfigService;
         this.chainConfig = chainConfig;
-        this.credentialsService = credentialsService;
+        this.signerService = signerService;
         this.iexecHubService = iexecHubService;
     }
 
@@ -324,7 +324,7 @@ public class ResultService implements Purgeable {
     public String getIexecUploadToken(WorkerpoolAuthorization workerpoolAuthorization) {
         try {
             final String hash = workerpoolAuthorization.getHash();
-            final String authorization = credentialsService.hashAndSignMessage(hash).getValue();
+            final String authorization = signerService.signMessageHash(hash).getValue();
             if (authorization.isEmpty()) {
                 log.error("Couldn't sign hash for an unknown reason [hash:{}]", hash);
                 return "";
@@ -363,7 +363,7 @@ public class ResultService implements Purgeable {
             }
 
             // sign challenge
-            String signedEip712Challenge = credentialsService.signEIP712EntityAndBuildToken(eip712Challenge);
+            String signedEip712Challenge = signerService.signEIP712EntityAndBuildToken(eip712Challenge);
 
             if (signedEip712Challenge.isEmpty()) {
                 log.error("Couldn't sign challenge for an unknown reason [challenge:{}]",
