@@ -19,6 +19,7 @@ package com.iexec.standalone.sms;
 import com.iexec.common.lifecycle.purge.ExpiringTaskMapFactory;
 import com.iexec.common.lifecycle.purge.Purgeable;
 import com.iexec.common.web.ApiResponseBodyDecoder;
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.tee.TeeFramework;
 import com.iexec.commons.poco.tee.TeeUtils;
@@ -26,7 +27,6 @@ import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.HashUtils;
 import com.iexec.sms.api.*;
 import com.iexec.standalone.chain.SignatureService;
-import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.registry.PlatformRegistryConfiguration;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
@@ -45,17 +45,17 @@ public class SmsService implements Purgeable {
 
     private final PlatformRegistryConfiguration registryConfiguration;
     private final SignatureService signatureService;
-    private final CredentialsService credentialsService;
+    private final SignerService signerService;
     private final SmsClientProvider smsClientProvider;
     private final Map<String, String> taskIdToSmsUrl = ExpiringTaskMapFactory.getExpiringTaskMap();
 
     public SmsService(PlatformRegistryConfiguration registryConfiguration,
                       SignatureService signatureService,
-                      CredentialsService credentialsService,
+                      SignerService signerService,
                       SmsClientProvider smsClientProvider) {
         this.registryConfiguration = registryConfiguration;
         this.signatureService = signatureService;
-        this.credentialsService = credentialsService;
+        this.signerService = signerService;
         this.smsClientProvider = smsClientProvider;
     }
 
@@ -211,7 +211,7 @@ public class SmsService implements Purgeable {
                     workerpoolAuthorization.getWorkerWallet(),
                     Hash.sha3String(IEXEC_RESULT_IEXEC_IPFS_TOKEN),
                     Hash.sha3String(token));
-            final String authorization = credentialsService.hashAndSignMessage(challenge).getValue();
+            final String authorization = signerService.signMessageHash(challenge).getValue();
             if (authorization.isEmpty()) {
                 log.error("Couldn't sign challenge for an unknown reason [hash:{}]", challenge);
                 return false;
@@ -258,7 +258,7 @@ public class SmsService implements Purgeable {
 
     private String getAuthorizationString(WorkerpoolAuthorization workerpoolAuthorization) {
         String challenge = workerpoolAuthorization.getHash();
-        return credentialsService.hashAndSignMessage(challenge).getValue();
+        return signerService.signMessageHash(challenge).getValue();
     }
 
     @Override

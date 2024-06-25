@@ -65,7 +65,7 @@ class IexecHubServiceTests {
     private static final String CHAIN_TASK_ID = "0x5125c4ca7176e40d8c5386072a6f262029609a5d3a896fbf592cd965e65098d9";
 
     @Mock
-    private CredentialsService credentialsService;
+    private SignerService signerService;
     @Mock
     private Web3jService web3jService;
     @Mock
@@ -87,11 +87,12 @@ class IexecHubServiceTests {
         when(chainConfig.getBlockTime()).thenReturn(Duration.ofSeconds(5L));
         when(chainConfig.getChainId()).thenReturn(65535);
         credentials = Credentials.create(Keys.createEcKeyPair());
-        when(credentialsService.getCredentials()).thenReturn(credentials);
+        when(signerService.getCredentials()).thenReturn(credentials);
+        when(signerService.getAddress()).thenReturn(credentials.getAddress());
         when(web3jService.hasEnoughGas(any())).thenReturn(true);
         when(chainConfig.getHubAddress()).thenReturn("0x748e091bf16048cb5103E0E10F9D5a8b7fBDd860");
         when(web3jService.getWeb3j()).thenReturn(web3jClient);
-        iexecHubService = spy(new IexecHubService(credentialsService, web3jService, chainConfig));
+        iexecHubService = spy(new IexecHubService(signerService, web3jService, chainConfig));
         ReflectionTestUtils.setField(iexecHubService, "iexecHubContract", iexecHubContract);
     }
 

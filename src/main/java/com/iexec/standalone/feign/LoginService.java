@@ -16,9 +16,9 @@
 
 package com.iexec.standalone.feign;
 
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +36,12 @@ public class LoginService {
     static final String TOKEN_PREFIX = "Bearer ";
     private String jwtToken;
 
-    private final CredentialsService credentialsService;
+    private final SignerService signerService;
     private final CoreClient coreClient;
     private final ReentrantLock lock = new ReentrantLock();
 
-    LoginService(CredentialsService credentialsService, CoreClient coreClient) {
-        this.credentialsService = credentialsService;
+    LoginService(SignerService signerService, CoreClient coreClient) {
+        this.signerService = signerService;
         this.coreClient = coreClient;
     }
 
@@ -68,8 +68,8 @@ public class LoginService {
             final String oldToken = jwtToken;
             expireToken();
 
-            String workerAddress = credentialsService.getCredentials().getAddress();
-            ECKeyPair ecKeyPair = credentialsService.getCredentials().getEcKeyPair();
+            String workerAddress = signerService.getCredentials().getAddress();
+            ECKeyPair ecKeyPair = signerService.getCredentials().getEcKeyPair();
 
             final String challenge;
             try {

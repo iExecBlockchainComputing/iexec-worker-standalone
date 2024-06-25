@@ -26,6 +26,7 @@ import com.iexec.common.utils.FileHelper;
 import com.iexec.common.utils.IexecFileHelper;
 import com.iexec.commons.poco.chain.ChainTask;
 import com.iexec.commons.poco.chain.ChainTaskStatus;
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.eip712.EIP712Domain;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
@@ -34,7 +35,6 @@ import com.iexec.commons.poco.task.TaskDescription;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.HashUtils;
 import com.iexec.standalone.chain.ChainConfig;
-import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.chain.IexecHubService;
 import com.iexec.standalone.chain.SignatureService;
 import com.iexec.standalone.config.WorkerConfigurationService;
@@ -123,7 +123,7 @@ class ResultServiceTests {
     @Mock
     private ChainConfig chainConfig;
     @Mock
-    private CredentialsService credentialsService;
+    private SignerService signerService;
 
     @InjectMocks
     @Spy
@@ -770,24 +770,24 @@ class ResultServiceTests {
     @Test
     void shouldGetIexecUploadTokenFromWorkerpoolAuthorization() {
         final String uploadToken = "uploadToken";
-        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(AUTHORIZATION));
+        when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenReturn(uploadToken);
         Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
-        verify(credentialsService).hashAndSignMessage(anyString());
+        verify(signerService).signMessageHash(anyString());
         verify(resultProxyClient).getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION);
     }
 
     @Test
     void shouldNotGetIexecUploadTokenWorkerpoolAuthorizationSinceSigningReturnsEmpty() {
-        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(""));
+        when(signerService.signMessageHash(anyString())).thenReturn(new Signature(""));
         Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
-        verify(credentialsService).hashAndSignMessage(anyString());
+        verify(signerService).signMessageHash(anyString());
         verifyNoInteractions(resultProxyClient);
     }
 
     @Test
     void shouldNotGetIexecUploadTokenFromWorkerpoolAuthorizationSinceFeignException() {
-        when(credentialsService.hashAndSignMessage(anyString())).thenReturn(new Signature(AUTHORIZATION));
+        when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenThrow(FeignException.Unauthorized.class);
         Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
     }
@@ -802,14 +802,14 @@ class ResultServiceTests {
 
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
-        when(credentialsService.signEIP712EntityAndBuildToken(challenge)).thenReturn(signedChallenge);
+        when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn(signedChallenge);
         when(resultProxyClient.login(chainId, signedChallenge)).thenReturn(uploadToken);
 
         Assertions.assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
-        verify(credentialsService, times(1)).signEIP712EntityAndBuildToken(challenge);
+        verify(signerService, times(1)).signEIP712EntityAndBuildToken(challenge);
         verify(resultProxyClient, times(1)).login(chainId, signedChallenge);
 
         verify(challenge, times(1)).getDomain();
@@ -828,7 +828,7 @@ class ResultServiceTests {
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
-        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(signerService, never()).signEIP712EntityAndBuildToken(any());
         verify(resultProxyClient, never()).login(anyInt(), any());
     }
 
@@ -843,7 +843,7 @@ class ResultServiceTests {
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
-        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(signerService, never()).signEIP712EntityAndBuildToken(any());
         verify(resultProxyClient, never()).login(anyInt(), any());
     }
 
@@ -862,7 +862,7 @@ class ResultServiceTests {
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
-        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(signerService, never()).signEIP712EntityAndBuildToken(any());
         verify(resultProxyClient, never()).login(anyInt(), any());
 
         verify(challenge, times(1)).getDomain();
@@ -884,7 +884,7 @@ class ResultServiceTests {
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(expectedChainId);
-        verify(credentialsService, never()).signEIP712EntityAndBuildToken(any());
+        verify(signerService, never()).signEIP712EntityAndBuildToken(any());
         verify(resultProxyClient, never()).login(anyInt(), any());
 
         verify(challenge, times(1)).getDomain();
@@ -900,13 +900,13 @@ class ResultServiceTests {
 
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
-        when(credentialsService.signEIP712EntityAndBuildToken(challenge)).thenReturn("");
+        when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn("");
 
         Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
-        verify(credentialsService, times(1)).signEIP712EntityAndBuildToken(challenge);
+        verify(signerService, times(1)).signEIP712EntityAndBuildToken(challenge);
         verify(resultProxyClient, never()).login(anyInt(), any());
 
         verify(challenge, times(1)).getDomain();

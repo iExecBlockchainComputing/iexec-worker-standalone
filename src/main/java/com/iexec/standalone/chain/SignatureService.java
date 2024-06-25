@@ -16,6 +16,7 @@
 
 package com.iexec.standalone.chain;
 
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.BytesUtils;
@@ -26,19 +27,19 @@ import org.web3j.crypto.Sign;
 @Service
 public class SignatureService {
 
-    private final CredentialsService credentialsService;
+    private final SignerService signerService;
 
-    public SignatureService(CredentialsService credentialsService) {
-        this.credentialsService = credentialsService;
+    public SignatureService(SignerService signerService) {
+        this.signerService = signerService;
     }
 
     public String getAddress() {
-        return credentialsService.getCredentials().getAddress();
+        return signerService.getAddress();
     }
 
     public Signature sign(String hash) {
         return new Signature(Sign.signPrefixedMessage(
-                BytesUtils.stringToBytes(hash), credentialsService.getCredentials().getEcKeyPair()));
+                BytesUtils.stringToBytes(hash), signerService.getCredentials().getEcKeyPair()));
     }
 
     public WorkerpoolAuthorization createAuthorization(String workerWallet, String chainTaskId, String enclaveChallenge) {

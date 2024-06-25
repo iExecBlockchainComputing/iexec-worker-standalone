@@ -16,9 +16,9 @@
 
 package com.iexec.standalone.feign;
 
+import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.standalone.chain.CredentialsService;
 import com.iexec.standalone.feign.client.CoreClient;
 import feign.FeignException;
 import lombok.SneakyThrows;
@@ -55,7 +55,7 @@ class LoginServiceTests {
     @Mock
     CoreClient coreClient;
     @Mock
-    CredentialsService credentialsService;
+    SignerService signerService;
     @InjectMocks
     private LoginService loginService;
 
@@ -66,14 +66,15 @@ class LoginServiceTests {
 
     @SneakyThrows
     private Credentials generateCredentials() {
-        ECKeyPair ecKeyPair = Keys.createEcKeyPair();
-        return Credentials.create(ecKeyPair);
+        final ECKeyPair ecKeyPair = Keys.createEcKeyPair();
+        final Credentials credentials = Credentials.create(ecKeyPair);
+        when(signerService.getCredentials()).thenReturn(credentials);
+        return credentials;
     }
 
     @Test
     void shouldNotLoginOnBadChallengeStatusCode() {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenThrow(FeignException.class);
         assertAll(
                 () -> assertEquals("", loginService.login()),
@@ -86,7 +87,6 @@ class LoginServiceTests {
     @ValueSource(strings = "")
     void shouldNotLoginOnEmptyChallenge(String challenge) {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenReturn(challenge);
         assertAll(
                 () -> assertEquals("", loginService.login()),
@@ -97,7 +97,6 @@ class LoginServiceTests {
     @Test
     void shouldNotLoginOnBadLoginStatusCode() {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenReturn("challenge");
         Signature signature = SignatureUtils.hashAndSign("challenge", credentials.getAddress(), credentials.getEcKeyPair());
         when(coreClient.login(credentials.getAddress(), signature)).thenThrow(FeignException.class);
@@ -113,7 +112,6 @@ class LoginServiceTests {
     @ParameterizedTest
     void shouldNotLoginOnEmptyToken(String token) {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenReturn("challenge");
         Signature signature = SignatureUtils.hashAndSign("challenge", credentials.getAddress(), credentials.getEcKeyPair());
         when(coreClient.login(credentials.getAddress(), signature)).thenReturn(token);
@@ -127,7 +125,6 @@ class LoginServiceTests {
     @Test
     void shouldLogin() {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenReturn("challenge");
         Signature signature = SignatureUtils.hashAndSign("challenge", credentials.getAddress(), credentials.getEcKeyPair());
         when(coreClient.login(credentials.getAddress(), signature)).thenReturn("token");
@@ -141,7 +138,6 @@ class LoginServiceTests {
     @Test
     void shouldLoginOnceOnSimultaneousCalls(CapturedOutput output) throws InterruptedException, ExecutionException, TimeoutException {
         Credentials credentials = generateCredentials();
-        when(credentialsService.getCredentials()).thenReturn(credentials);
         when(coreClient.getChallenge(credentials.getAddress())).thenReturn("challenge");
         Signature signature = SignatureUtils.hashAndSign("challenge", credentials.getAddress(), credentials.getEcKeyPair());
         when(coreClient.login(credentials.getAddress(), signature)).thenReturn("token");

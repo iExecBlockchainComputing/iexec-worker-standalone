@@ -20,13 +20,13 @@ import com.iexec.common.config.PublicConfiguration;
 import com.iexec.common.config.WorkerModel;
 import com.iexec.common.replicate.ComputeLogs;
 import com.iexec.common.replicate.ReplicateStatusUpdate;
-import com.iexec.common.replicate.ReplicateTaskSummary;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.standalone.logs.TaskLogsModel;
 import com.iexec.standalone.metric.PlatformMetric;
 import com.iexec.standalone.notification.TaskNotification;
 import com.iexec.standalone.notification.TaskNotificationType;
+import com.iexec.standalone.replicate.ReplicateTaskSummary;
 import com.iexec.standalone.task.TaskModel;
 import feign.Headers;
 import feign.Param;
@@ -54,7 +54,7 @@ public interface SchedulerClient {
 
     @RequestLine("POST /workers/register")
     @Headers("Authorization: {authorization}")
-    void registerWorker(@Param("authorization") String authorization, WorkerModel model);
+    Void registerWorker(@Param("authorization") String authorization, WorkerModel model);
 
     @RequestLine("GET /workers/config")
     PublicConfiguration getPublicConfiguration();
