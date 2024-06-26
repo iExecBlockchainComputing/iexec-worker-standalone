@@ -245,33 +245,6 @@ class IexecHubServiceTests {
     }
     // endregion
 
-    // region reOpen
-    @Test
-    void testReOpenThrowExecutionException() throws Exception {
-        when(remoteFunctionCall.send()).thenThrow(Exception.class);
-        Optional<ChainReceipt> chainReceipt = Optional.empty();
-        try {
-            chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
-        } catch (Exception e) {
-            assertThat(Thread.currentThread().isInterrupted()).isTrue();
-            assertThat(e).isInstanceOf(ExecutionException.class);
-        }
-        assertThat(chainReceipt).isEmpty();
-    }
-
-    @Test
-    void testReOpenThrowInterruptedException() throws Exception {
-        when(remoteFunctionCall.send()).thenThrow(Exception.class);
-        Optional<ChainReceipt> chainReceipt = Optional.empty();
-        try {
-            chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
-        } catch (Exception e) {
-            assertThat(e).isInstanceOf(InterruptedException.class);
-        }
-        assertThat(chainReceipt).isEmpty();
-    }
-    // endregion
-
     // region isContributed
     @ParameterizedTest
     @EnumSource(value = ChainContributionStatus.class, mode = EnumSource.Mode.INCLUDE, names = {"CONTRIBUTED", "REVEALED"})
