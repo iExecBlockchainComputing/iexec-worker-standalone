@@ -22,8 +22,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-//TODO: Eventually move this to an iexec-core-library embedding DTOs
-// (Eventually move this along with TaskNotificationExtra & more)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

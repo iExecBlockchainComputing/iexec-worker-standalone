@@ -141,8 +141,7 @@ public class ReplicatesController {
         statusUpdate.setModifier(ReplicateStatusModifier.WORKER);
         statusUpdate.setDate(new Date());
 
-        // Assuming wallet address sent by the worker is correct
-        // would be a security issue. Let's replace it.
+        // Assuming wallet address sent by the worker is correct would be a security issue. Let's replace it.
         final ReplicateStatusDetails details = statusUpdate.getDetails();
         if (details != null && details.getComputeLogs() != null) {
             details.getComputeLogs().setWalletAddress(walletAddress);
