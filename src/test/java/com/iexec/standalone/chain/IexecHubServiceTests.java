@@ -45,10 +45,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
+import static com.iexec.commons.poco.utils.BytesUtils.stringToBytes;
 import static com.iexec.commons.poco.utils.TestUtils.WORKER_ADDRESS;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -239,6 +241,32 @@ class IexecHubServiceTests {
                 .build();
         doReturn(Optional.of(chainTask)).when(iexecHubService).getChainTask(CHAIN_TASK_ID);
         assertThat(iexecHubService.canReopen(CHAIN_TASK_ID)).isTrue();
+    }
+    // endregion
+
+    // region reOpen
+    @Test
+    void testReOpenThrowExecutionException() throws Exception {
+        when(remoteFunctionCall.send()).thenThrow(ExecutionException.class);
+        Optional<ChainReceipt> chainReceipt = Optional.empty();
+        try {
+            chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(ExecutionException.class);
+        }
+        assertThat(chainReceipt).isEmpty();
+    }
+
+    @Test
+    void testReOpenThrowInterruptedException() throws Exception {
+        when(remoteFunctionCall.send()).thenThrow(InterruptedException.class);
+        Optional<ChainReceipt> chainReceipt = Optional.empty();
+        try {
+            chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
+        } catch (Exception e) {
+            assertThat(e).isInstanceOf(InterruptedException.class);
+        }
+        assertThat(chainReceipt).isEmpty();
     }
     // endregion
 
