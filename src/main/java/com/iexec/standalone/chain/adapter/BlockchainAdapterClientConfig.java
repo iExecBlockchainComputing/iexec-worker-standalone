@@ -19,7 +19,6 @@ package com.iexec.standalone.chain.adapter;
 import com.iexec.blockchain.api.BlockchainAdapterApiClient;
 import com.iexec.blockchain.api.BlockchainAdapterApiClientBuilder;
 import com.iexec.blockchain.api.BlockchainAdapterService;
-import com.iexec.common.config.PublicChainConfig;
 import feign.Logger;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
