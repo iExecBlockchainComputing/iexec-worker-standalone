@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.testcontainers.shaded.org.bouncycastle.asn1.cms.OtherRecipientInfo;
 import org.web3j.crypto.Credentials;
 import org.web3j.crypto.Hash;
 import org.web3j.crypto.Keys;
@@ -247,11 +248,12 @@ class IexecHubServiceTests {
     // region reOpen
     @Test
     void testReOpenThrowExecutionException() throws Exception {
-        when(remoteFunctionCall.send()).thenThrow(ExecutionException.class);
+        when(remoteFunctionCall.send()).thenThrow(Exception.class);
         Optional<ChainReceipt> chainReceipt = Optional.empty();
         try {
             chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
         } catch (Exception e) {
+            assertThat(Thread.currentThread().isInterrupted()).isTrue();
             assertThat(e).isInstanceOf(ExecutionException.class);
         }
         assertThat(chainReceipt).isEmpty();
@@ -259,7 +261,7 @@ class IexecHubServiceTests {
 
     @Test
     void testReOpenThrowInterruptedException() throws Exception {
-        when(remoteFunctionCall.send()).thenThrow(InterruptedException.class);
+        when(remoteFunctionCall.send()).thenThrow(Exception.class);
         Optional<ChainReceipt> chainReceipt = Optional.empty();
         try {
             chainReceipt = iexecHubService.reOpen(CHAIN_TASK_ID);
