@@ -254,14 +254,14 @@ class ResultServiceTests {
                 ReplicateStatus.DATA_DOWNLOAD_FAILED,
                 ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
 
-        Assertions.assertThat(isErrorWritten).isTrue();
+        assertThat(isErrorWritten).isTrue();
         String errorFileAsString = FileHelper.readFile(tmp + "/"
                 + ResultService.ERROR_FILENAME);
-        Assertions.assertThat(errorFileAsString).contains("[IEXEC] Error occurred while " +
+        assertThat(errorFileAsString).contains("[IEXEC] Error occurred while " +
                 "computing the task");
         String computedFileAsString = FileHelper.readFile(tmp + File.separator
                 + IexecFileHelper.COMPUTED_JSON);
-        Assertions.assertThat(computedFileAsString).isEqualTo("{" +
+        assertThat(computedFileAsString).isEqualTo("{" +
                 "\"deterministic-output-path\":\"" + pathSeparator + "iexec_out" + pathSeparator + "error.txt\"," +
                 "\"callback-data\":null," +
                 "\"task-id\":null," +
@@ -280,7 +280,7 @@ class ResultServiceTests {
                 ReplicateStatus.DATA_DOWNLOAD_FAILED,
                 ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
 
-        Assertions.assertThat(isErrorWritten).isFalse();
+        assertThat(isErrorWritten).isFalse();
     }
 
     @Test
@@ -402,7 +402,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/ipfs/" + ipfsHash));
+        assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/ipfs/" + ipfsHash));
     }
 
     @Test
@@ -414,7 +414,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/results/" + CHAIN_TASK_ID));
+        assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/results/" + CHAIN_TASK_ID));
     }
 
     @Test
@@ -426,7 +426,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEmpty();
+        assertThat(resultLink).isEmpty();
     }
 
 
@@ -436,7 +436,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEmpty();
+        assertThat(resultLink).isEmpty();
     }
 
     //region getComputedFile
@@ -783,7 +783,7 @@ class ResultServiceTests {
         final String uploadToken = "uploadToken";
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenReturn(uploadToken);
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
         verify(signerService).signMessageHash(anyString());
         verify(resultProxyClient).getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION);
     }
@@ -791,7 +791,7 @@ class ResultServiceTests {
     @Test
     void shouldNotGetIexecUploadTokenWorkerpoolAuthorizationSinceSigningReturnsEmpty() {
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(""));
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
         verify(signerService).signMessageHash(anyString());
         verifyNoInteractions(resultProxyClient);
     }
@@ -800,7 +800,7 @@ class ResultServiceTests {
     void shouldNotGetIexecUploadTokenFromWorkerpoolAuthorizationSinceFeignException() {
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenThrow(FeignException.Unauthorized.class);
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
     }
 
     @Test
@@ -816,7 +816,7 @@ class ResultServiceTests {
         when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn(signedChallenge);
         when(resultProxyClient.login(chainId, signedChallenge)).thenReturn(uploadToken);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
+        assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -835,7 +835,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(null);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -850,7 +850,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenThrow(RuntimeException.class);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -869,7 +869,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -891,7 +891,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(expectedChainId);
         when(resultProxyClient.getChallenge(expectedChainId)).thenReturn(challenge);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(expectedChainId);
@@ -913,7 +913,7 @@ class ResultServiceTests {
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
         when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn("");
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -932,7 +932,7 @@ class ResultServiceTests {
         when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
 
-        Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+        assertThat(resultService.purgeTask(CHAIN_TASK_ID))
                 .isTrue();
     }
 
@@ -945,7 +945,7 @@ class ResultServiceTests {
             fileHelper.when(() -> FileHelper.deleteFolder(tmp))
                     .thenReturn(false);
 
-            Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+            assertThat(resultService.purgeTask(CHAIN_TASK_ID))
                     .isFalse();
         }
     }
@@ -967,8 +967,8 @@ class ResultServiceTests {
 
         resultService.purgeAllTasksData();
 
-        Assertions.assertThat(resultInfoMap).isEmpty();
-        Assertions.assertThat(new File(tmp)).doesNotExist();
+        assertThat(resultInfoMap.isEmpty()).isTrue();
+        assertThat(new File(tmp)).doesNotExist();
     }
     // endregion
 }

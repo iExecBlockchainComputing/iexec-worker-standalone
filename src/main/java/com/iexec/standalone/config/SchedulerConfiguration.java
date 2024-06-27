@@ -30,7 +30,7 @@ import java.net.URL;
 @Configuration
 public class SchedulerConfiguration {
 
-    @private final String protocol;
+    private final String protocol;
     private final String host;
     private final String port;
 

@@ -61,7 +61,7 @@ public class StompClientService {
     /**
      * Subscribe to a topic and provide a {@link StompFrameHandler}
      * to handle received messages.
-     * 
+     *
      * @param topic
      * @param messageHandler an implementation of {@link StompFrameHandler}
      * @return
@@ -131,7 +131,7 @@ public class StompClientService {
          * Handle any exception arising while processing a STOMP frame such as a
          * failure to convert the payload or an unhandled exception in the
          * application {@code StompFrameHandler}.
-         * 
+         *
          * @param session the client STOMP session
          * @param command the STOMP command of the frame
          * @param headers the headers
@@ -154,7 +154,7 @@ public class StompClientService {
          * ConnectionLostException} will be passed into this method when the
          * connection is lost rather than closed normally via
          * {@link StompSession#disconnect()}.
-         * 
+         *
          * @param session the client STOMP session
          * @param exception the exception that occurred
          */
