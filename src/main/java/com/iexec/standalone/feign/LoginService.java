@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2020-2024 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.iexec.standalone.feign;
 import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.standalone.feign.client.CoreClient;
+import com.iexec.standalone.api.SchedulerClient;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -37,10 +37,10 @@ public class LoginService {
     private String jwtToken;
 
     private final SignerService signerService;
-    private final CoreClient coreClient;
+    private final SchedulerClient coreClient;
     private final ReentrantLock lock = new ReentrantLock();
 
-    LoginService(SignerService signerService, CoreClient coreClient) {
+    LoginService(SignerService signerService, SchedulerClient coreClient) {
         this.signerService = signerService;
         this.coreClient = coreClient;
     }
@@ -68,8 +68,8 @@ public class LoginService {
             final String oldToken = jwtToken;
             expireToken();
 
-            String workerAddress = signerService.getCredentials().getAddress();
-            ECKeyPair ecKeyPair = signerService.getCredentials().getEcKeyPair();
+            final String workerAddress = signerService.getCredentials().getAddress();
+            final ECKeyPair ecKeyPair = signerService.getCredentials().getEcKeyPair();
 
             final String challenge;
             try {
@@ -83,7 +83,7 @@ public class LoginService {
                 return "";
             }
 
-            Signature signature = SignatureUtils.hashAndSign(challenge, workerAddress, ecKeyPair);
+            final Signature signature = SignatureUtils.hashAndSign(challenge, ecKeyPair);
             final String token;
             try {
                 token = coreClient.login(workerAddress, signature);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 IEXEC BLOCKCHAIN TECH
+ * Copyright 2022-2024 IEXEC BLOCKCHAIN TECH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package com.iexec.standalone.feign;
 import com.iexec.commons.poco.chain.SignerService;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.utils.SignatureUtils;
-import com.iexec.standalone.feign.client.CoreClient;
+import com.iexec.standalone.api.SchedulerClient;
 import feign.FeignException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +53,7 @@ import static org.mockito.Mockito.when;
 class LoginServiceTests {
 
     @Mock
-    CoreClient coreClient;
+    SchedulerClient coreClient;
     @Mock
     SignerService signerService;
     @InjectMocks
