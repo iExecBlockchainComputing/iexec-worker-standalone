@@ -23,7 +23,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 
-public class CoreConfigurationServiceTests {
+class CoreConfigurationServiceTests {
 
     private final ApplicationContextRunner runner = new ApplicationContextRunner();
 
