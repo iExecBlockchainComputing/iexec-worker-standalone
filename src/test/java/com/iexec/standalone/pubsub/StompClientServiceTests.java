@@ -42,7 +42,7 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(OutputCaptureExtension.class)
 class StompClientServiceTests {
-    private final static String SESSION_ID = "SESSION_ID";
+    private static final String SESSION_ID = "SESSION_ID";
 
     @Mock
     ApplicationEventPublisher applicationEventPublisher;
@@ -95,7 +95,7 @@ class StompClientServiceTests {
 
     // region createStompSessionIfDisconnected
     @Test
-    void shouldNotCreateStompSessionIfAlreadyConnected(CapturedOutput output) throws Exception {
+    void shouldNotCreateStompSessionIfAlreadyConnected(CapturedOutput output) {
         final StompSession connectedSession = mock(StompSession.class);
         when(connectedSession.isConnected()).thenReturn(true);
         when(connectedSession.getSessionId()).thenReturn(SESSION_ID);
@@ -107,7 +107,7 @@ class StompClientServiceTests {
     }
 
     @Test
-    void shouldCreateStompSessionIfNoSession(CapturedOutput output) throws Exception {
+    void shouldCreateStompSessionIfNoSession(CapturedOutput output) {
         final SettableListenableFuture<StompSession> futureSession = new SettableListenableFuture<>();
         futureSession.set(mockedStompSession);
         when(stompClient.connect(any(), any())).thenReturn(futureSession);
@@ -118,7 +118,7 @@ class StompClientServiceTests {
     }
 
     @Test
-    void shouldCreateStompSessionIfDisconnected(CapturedOutput output) throws Exception {
+    void shouldCreateStompSessionIfDisconnected(CapturedOutput output) {
         final StompSession disconnectedSession = mock(StompSession.class);
         when(disconnectedSession.isConnected()).thenReturn(false);
         ReflectionTestUtils.setField(stompClientService, "stompSession", disconnectedSession);

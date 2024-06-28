@@ -419,23 +419,21 @@ class PreComputeServiceTests {
     @ParameterizedTest
     @MethodSource("teeSessionGenerationErrorMap")
     void shouldConvertTeeSessionGenerationError(TeeSessionGenerationError error, ReplicateStatusCause expectedCause) {
-        Assertions.assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error))
-                .isEqualTo(expectedCause);
+        assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error)).isEqualTo(expectedCause);
     }
 
     @Test
     void shouldAllTeeSessionGenerationErrorHaveMatch() {
         for (TeeSessionGenerationError error : TeeSessionGenerationError.values()) {
-            Assertions.assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error))
-                    .isNotNull();
+            assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error)).isNotNull();
         }
     }
 
     @Test
-    void shouldFailedAndReturnNull() {
+    void shouldFailAndReturnNull() {
         TeeSessionGenerationError error = mock(TeeSessionGenerationError.class);
         when(error.name()).thenReturn("NA");
-        Assertions.assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error)).isNull();
+        assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error)).isNull();
     }
     // endregion
 }

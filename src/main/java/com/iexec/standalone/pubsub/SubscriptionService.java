@@ -17,7 +17,6 @@
 package com.iexec.standalone.pubsub;
 
 import com.iexec.standalone.notification.TaskNotification;
-import com.iexec.standalone.pubsub.StompClientService;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
