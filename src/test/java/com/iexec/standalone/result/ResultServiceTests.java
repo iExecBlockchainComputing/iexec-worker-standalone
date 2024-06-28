@@ -24,11 +24,7 @@ import com.iexec.common.result.ComputedFile;
 import com.iexec.common.result.ResultModel;
 import com.iexec.common.utils.FileHelper;
 import com.iexec.common.utils.IexecFileHelper;
-import com.iexec.commons.poco.chain.ChainDeal;
-import com.iexec.commons.poco.chain.ChainTask;
-import com.iexec.commons.poco.chain.ChainTaskStatus;
-import com.iexec.commons.poco.chain.SignerService;
-import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
+import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.eip712.EIP712Domain;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
 import com.iexec.commons.poco.security.Signature;
@@ -36,13 +32,13 @@ import com.iexec.commons.poco.task.TaskDescription;
 import com.iexec.commons.poco.tee.TeeUtils;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.HashUtils;
+import com.iexec.resultproxy.api.ResultProxyClient;
 import com.iexec.standalone.chain.ChainConfig;
 import com.iexec.standalone.chain.IexecHubService;
 import com.iexec.standalone.chain.SignatureService;
 import com.iexec.standalone.config.WorkerConfigurationService;
 import com.iexec.standalone.task.Task;
 import com.iexec.standalone.task.TaskService;
-import com.iexec.resultproxy.api.ResultProxyClient;
 import feign.FeignException;
 import lombok.SneakyThrows;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,11 +68,8 @@ import static com.iexec.commons.poco.utils.BytesUtils.EMPTY_ADDRESS;
 import static com.iexec.standalone.task.TaskTestsUtils.getStubTask;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
 //@Slf4j
 class ResultServiceTests {
@@ -88,11 +81,11 @@ class ResultServiceTests {
     private static final String CHAIN_TASK_ID = "0x7602291763f60943833c39a11b7e81f1f372f29b102bffad5b23c62bde0ef70e";
     private static final String CHAIN_TASK_ID_2 = "taskId2";
     private static final String IEXEC_WORKER_TMP_FOLDER = "src"
-                                                        + File.separator + "test"
-                                                        + File.separator + "resources"
-                                                        + File.separator + "tmp"
-                                                        + File.separator + "test-worker"
-                                                        + File.separator;
+            + File.separator + "test"
+            + File.separator + "resources"
+            + File.separator + "tmp"
+            + File.separator + "test-worker"
+            + File.separator;
     private static final String TMP_FILE = IEXEC_WORKER_TMP_FOLDER + "computed.zip";
     private static final String CALLBACK = "0x0000000000000000000000000000000000000abc";
 
@@ -112,8 +105,8 @@ class ResultServiceTests {
             .build();
 
     private final String pathSeparator = Pattern.compile("Window")
-                                            .matcher(System.getProperty("os.name"))
-                                            .find() ? File.separator + File.separator : File.separator;
+            .matcher(System.getProperty("os.name"))
+            .find() ? File.separator + File.separator : File.separator;
 
     @TempDir
     public File folderRule;
@@ -231,6 +224,7 @@ class ResultServiceTests {
     void testGetResultFolderPath() {
         when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
         assertThat(resultService.getResultFolderPath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.isResultFolderFound(CHAIN_TASK_ID)).isTrue();
     }
 
     @Test
@@ -243,6 +237,18 @@ class ResultServiceTests {
     void testGetEncryptedResultFilePath() {
         when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
         assertThat(resultService.getEncryptedResultFilePath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER + ".zip");
+    }
+
+    @Test
+    void testIsResultAvailable() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER + "computed");
+        assertThat(resultService.isResultAvailable(CHAIN_TASK_ID)).isTrue();
+    }
+
+    @Test
+    void testIsEncryptedResultZipFound() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER + "computed");
+        assertThat(resultService.isEncryptedResultZipFound(CHAIN_TASK_ID)).isTrue();
     }
 
     @Test
@@ -538,7 +544,7 @@ class ResultServiceTests {
         assertThat(resultDigest).isEmpty();
     }
     //endregion
-  
+
     //region writeComputedFile
     @Test
     void shouldWriteComputedFile() throws JsonProcessingException {

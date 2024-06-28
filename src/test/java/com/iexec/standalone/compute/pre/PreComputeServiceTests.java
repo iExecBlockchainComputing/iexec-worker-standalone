@@ -430,5 +430,12 @@ class PreComputeServiceTests {
                     .isNotNull();
         }
     }
+
+    @Test
+    void shouldFailedAndReturnNull() {
+        TeeSessionGenerationError error = mock(TeeSessionGenerationError.class);
+        when(error.name()).thenReturn("NA");
+        Assertions.assertThat(preComputeService.teeSessionGenerationErrorToReplicateStatusCause(error)).isNull();
+    }
     // endregion
 }
