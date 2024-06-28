@@ -64,6 +64,7 @@ class ConfigServerClientConfigTests {
         PublicChainConfig expectedConfig = PublicChainConfig.builder()
                 .chainId(255)
                 .chainNodeUrl("http://localhost:8545")
+                .iexecHubContractAddress("0xC129e7917b7c7DeDfAa5Fff1FB18d5D7050fE8ca")
                 .blockTime(Duration.ofSeconds(5L))
                 .sidechain(true)
                 .build();
