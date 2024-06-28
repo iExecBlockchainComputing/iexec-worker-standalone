@@ -24,27 +24,23 @@ import com.iexec.common.result.ComputedFile;
 import com.iexec.common.result.ResultModel;
 import com.iexec.common.utils.FileHelper;
 import com.iexec.common.utils.IexecFileHelper;
-import com.iexec.commons.poco.chain.ChainTask;
-import com.iexec.commons.poco.chain.ChainTaskStatus;
-import com.iexec.commons.poco.chain.SignerService;
-import com.iexec.commons.poco.chain.WorkerpoolAuthorization;
+import com.iexec.commons.poco.chain.*;
 import com.iexec.commons.poco.eip712.EIP712Domain;
 import com.iexec.commons.poco.eip712.entity.EIP712Challenge;
 import com.iexec.commons.poco.security.Signature;
 import com.iexec.commons.poco.task.TaskDescription;
+import com.iexec.commons.poco.tee.TeeUtils;
 import com.iexec.commons.poco.utils.BytesUtils;
 import com.iexec.commons.poco.utils.HashUtils;
+import com.iexec.resultproxy.api.ResultProxyClient;
 import com.iexec.standalone.chain.ChainConfig;
 import com.iexec.standalone.chain.IexecHubService;
 import com.iexec.standalone.chain.SignatureService;
 import com.iexec.standalone.config.WorkerConfigurationService;
 import com.iexec.standalone.task.Task;
 import com.iexec.standalone.task.TaskService;
-import com.iexec.resultproxy.api.ResultProxyClient;
 import feign.FeignException;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -72,39 +68,45 @@ import static com.iexec.commons.poco.utils.BytesUtils.EMPTY_ADDRESS;
 import static com.iexec.standalone.task.TaskTestsUtils.getStubTask;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.Mockito.times;
 
-@Slf4j
+//@Slf4j
 class ResultServiceTests {
 
     public static final String RESULT_DIGEST = "0x0000000000000000000000000000000000000000000000000000000000000001";
     // 32 + 32 + 1 = 65 bytes
     public static final String ENCLAVE_SIGNATURE = "0x000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000b0c";
-    private static final String CHAIN_TASK_ID = "taskId";
+    private static final String CHAIN_DEAL_ID = "0xe1f3b96f58be8d5d1958ac14b6a3e93497ad9985ea44ac8c79f613129fff79a0";
+    private static final String CHAIN_TASK_ID = "0x7602291763f60943833c39a11b7e81f1f372f29b102bffad5b23c62bde0ef70e";
     private static final String CHAIN_TASK_ID_2 = "taskId2";
     private static final String IEXEC_WORKER_TMP_FOLDER = "src"
-                                                        + File.separator + "test"
-                                                        + File.separator + "resources"
-                                                        + File.separator + "tmp"
-                                                        + File.separator + "test-worker"
-                                                        + File.separator;
+            + File.separator + "test"
+            + File.separator + "resources"
+            + File.separator + "tmp"
+            + File.separator + "test-worker"
+            + File.separator;
     private static final String TMP_FILE = IEXEC_WORKER_TMP_FOLDER + "computed.zip";
     private static final String CALLBACK = "0x0000000000000000000000000000000000000abc";
 
     private static final String AUTHORIZATION = "0x4";
+    private static final ChainTask CHAIN_TASK = ChainTask.builder()
+            .dealid(CHAIN_DEAL_ID)
+            .status(ChainTaskStatus.ACTIVE)
+            .build();
+    private static final ChainDeal CHAIN_DEAL = ChainDeal.builder()
+            .chainDealId(CHAIN_DEAL_ID)
+            .tag(TeeUtils.TEE_SCONE_ONLY_TAG)
+            .build();
     private static final WorkerpoolAuthorization WORKERPOOL_AUTHORIZATION = WorkerpoolAuthorization.builder()
-            .chainTaskId("0x1")
+            .chainTaskId(CHAIN_TASK_ID)
             .enclaveChallenge("0x2")
             .workerWallet("0x3")
             .build();
 
     private final String pathSeparator = Pattern.compile("Window")
-                                            .matcher(System.getProperty("os.name"))
-                                            .find() ? File.separator + File.separator : File.separator;
+            .matcher(System.getProperty("os.name"))
+            .find() ? File.separator + File.separator : File.separator;
 
     @TempDir
     public File folderRule;
@@ -222,6 +224,7 @@ class ResultServiceTests {
     void testGetResultFolderPath() {
         when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER);
         assertThat(resultService.getResultFolderPath(CHAIN_TASK_ID)).isEqualTo(IEXEC_WORKER_TMP_FOLDER);
+        assertThat(resultService.isResultFolderFound(CHAIN_TASK_ID)).isTrue();
     }
 
     @Test
@@ -237,6 +240,18 @@ class ResultServiceTests {
     }
 
     @Test
+    void testIsResultAvailable() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER + "computed");
+        assertThat(resultService.isResultAvailable(CHAIN_TASK_ID)).isTrue();
+    }
+
+    @Test
+    void testIsEncryptedResultZipFound() {
+        when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID)).thenReturn(IEXEC_WORKER_TMP_FOLDER + "computed");
+        assertThat(resultService.isEncryptedResultZipFound(CHAIN_TASK_ID)).isTrue();
+    }
+
+    @Test
     void shouldWriteErrorToIexecOut() {
         when(workerConfigurationService.getTaskIexecOutDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
@@ -245,14 +260,14 @@ class ResultServiceTests {
                 ReplicateStatus.DATA_DOWNLOAD_FAILED,
                 ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
 
-        Assertions.assertThat(isErrorWritten).isTrue();
+        assertThat(isErrorWritten).isTrue();
         String errorFileAsString = FileHelper.readFile(tmp + "/"
                 + ResultService.ERROR_FILENAME);
-        Assertions.assertThat(errorFileAsString).contains("[IEXEC] Error occurred while " +
+        assertThat(errorFileAsString).contains("[IEXEC] Error occurred while " +
                 "computing the task");
         String computedFileAsString = FileHelper.readFile(tmp + File.separator
                 + IexecFileHelper.COMPUTED_JSON);
-        Assertions.assertThat(computedFileAsString).isEqualTo("{" +
+        assertThat(computedFileAsString).isEqualTo("{" +
                 "\"deterministic-output-path\":\"" + pathSeparator + "iexec_out" + pathSeparator + "error.txt\"," +
                 "\"callback-data\":null," +
                 "\"task-id\":null," +
@@ -271,7 +286,7 @@ class ResultServiceTests {
                 ReplicateStatus.DATA_DOWNLOAD_FAILED,
                 ReplicateStatusCause.INPUT_FILES_DOWNLOAD_FAILED);
 
-        Assertions.assertThat(isErrorWritten).isFalse();
+        assertThat(isErrorWritten).isFalse();
     }
 
     @Test
@@ -393,7 +408,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/ipfs/" + ipfsHash));
+        assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/ipfs/" + ipfsHash));
     }
 
     @Test
@@ -405,7 +420,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/results/" + CHAIN_TASK_ID));
+        assertThat(resultLink).isEqualTo(resultService.buildResultLink(storage, "/results/" + CHAIN_TASK_ID));
     }
 
     @Test
@@ -417,7 +432,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEmpty();
+        assertThat(resultLink).isEmpty();
     }
 
 
@@ -427,7 +442,7 @@ class ResultServiceTests {
 
         String resultLink = resultService.getWeb2ResultLink(CHAIN_TASK_ID);
 
-        Assertions.assertThat(resultLink).isEmpty();
+        assertThat(resultLink).isEmpty();
     }
 
     //region getComputedFile
@@ -448,7 +463,7 @@ class ResultServiceTests {
                 resultService.getComputedFile(chainTaskId);
         String hash = computedFile.getResultDigest();
         // should be equal to the content of the file since it is a byte32
-        Assertions.assertThat(hash).isEqualTo(
+        assertThat(hash).isEqualTo(
                 "0x09b727883db89fa3b3504f83e0c67d04a0d4fc35a9670cc4517c49d2a27ad171");
     }
 
@@ -468,9 +483,8 @@ class ResultServiceTests {
         ComputedFile computedFile =
                 resultService.getComputedFile(chainTaskId);
         String hash = computedFile.getResultDigest();
-        log.info(hash);
         // should be equal to the content of the file since it is a byte32
-        Assertions.assertThat(hash).isEqualTo(
+        assertThat(hash).isEqualTo(
                 "0xc6114778cc5c33db5fbbd4d0f9be116ed0232961045341714aba5a72d3ef7402");
     }
 
@@ -486,9 +500,8 @@ class ResultServiceTests {
         ComputedFile computedFile =
                 resultService.getComputedFile(chainTaskId);
         String hash = computedFile.getResultDigest();
-        log.info(hash);
         // should be equal to the content of the file since it is a byte32
-        Assertions.assertThat(hash).isEqualTo(
+        assertThat(hash).isEqualTo(
                 "0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6");
     }
 
@@ -498,7 +511,7 @@ class ResultServiceTests {
         when(workerConfigurationService.getTaskOutputDir(chainTaskId))
                 .thenReturn(IEXEC_WORKER_TMP_FOLDER + chainTaskId + "/output");
         ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
-        Assertions.assertThat(computedFile).isNull();
+        assertThat(computedFile).isNull();
     }
 
     @Test
@@ -509,11 +522,11 @@ class ResultServiceTests {
         when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
                 TaskDescription.builder().callback(BytesUtils.EMPTY_ADDRESS).build());
         ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
-        Assertions.assertThat(computedFile).isNull();
+        assertThat(computedFile).isNull();
         computedFile = resultService.readComputedFile(chainTaskId);
-        Assertions.assertThat(computedFile).isNotNull();
+        assertThat(computedFile).isNotNull();
         String resultDigest = resultService.computeResultDigest(computedFile);
-        Assertions.assertThat(resultDigest).isEmpty();
+        assertThat(resultDigest).isEmpty();
     }
 
     @Test
@@ -524,14 +537,14 @@ class ResultServiceTests {
         when(iexecHubService.getTaskDescription(chainTaskId)).thenReturn(
                 TaskDescription.builder().callback(CALLBACK).build());
         ComputedFile computedFile = resultService.getComputedFile(chainTaskId);
-        Assertions.assertThat(computedFile).isNull();
+        assertThat(computedFile).isNull();
         computedFile = resultService.readComputedFile(chainTaskId);
-        Assertions.assertThat(computedFile).isNotNull();
+        assertThat(computedFile).isNotNull();
         String resultDigest = resultService.computeResultDigest(computedFile);
-        Assertions.assertThat(resultDigest).isEmpty();
+        assertThat(resultDigest).isEmpty();
     }
     //endregion
-  
+
     //region writeComputedFile
     @Test
     void shouldWriteComputedFile() throws JsonProcessingException {
@@ -542,37 +555,31 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isTrue();
+        assertThat(isWritten).isTrue();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
         ComputedFile writtenComputeFile = new ObjectMapper()
                 .readValue(writtenComputeFileAsString, ComputedFile.class);
-        Assertions.assertThat(writtenComputeFile).isEqualTo(computedFile);
+        assertThat(writtenComputeFile).isEqualTo(computedFile);
     }
 
     @Test
     void shouldNotWriteComputedFileSinceNothingToWrite() {
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
-        when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
-                .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
-
         boolean isWritten = resultService.writeComputedFile(null);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
+        verifyNoInteractions(iexecHubService, workerConfigurationService);
+
     }
 
     @Test
@@ -583,19 +590,13 @@ class ResultServiceTests {
                 .enclaveSignature(ENCLAVE_SIGNATURE)
                 .build();
 
-        when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
-        when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
-                .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
-
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
+        verifyNoInteractions(iexecHubService, workerConfigurationService);
     }
 
     @Test
@@ -607,18 +608,15 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.UNSET).build()));
-        when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
-                .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+                .thenReturn(Optional.of(ChainTask.builder().status(ChainTaskStatus.UNSET).build()));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
+        verifyNoInteractions(workerConfigurationService);
     }
 
     @Test
@@ -630,11 +628,10 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         //mock old file already written
         resultService.writeComputedFile(ComputedFile.builder()
@@ -645,12 +642,12 @@ class ResultServiceTests {
         //write new file
         boolean isWritten = resultService.writeComputedFile(newComputedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
         ComputedFile writtenComputeFile = new ObjectMapper()
                 .readValue(writtenComputeFileAsString, ComputedFile.class);
-        Assertions.assertThat(writtenComputeFile).isNotEqualTo(newComputedFile);
+        assertThat(writtenComputeFile).isNotEqualTo(newComputedFile);
     }
 
     @Test
@@ -662,18 +659,17 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
     }
 
     @Test
@@ -685,18 +681,42 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
+    }
+
+    @Test
+    void shouldNotWriteComputedFileSinceNotTeeTask() {
+        ComputedFile computedFile = ComputedFile.builder()
+                .taskId(CHAIN_TASK_ID)
+                .resultDigest(RESULT_DIGEST)
+                .enclaveSignature(BytesUtils.EMPTY_HEX_STRING_32)
+                .build();
+
+        when(iexecHubService.getChainTask(CHAIN_TASK_ID))
+                .thenReturn(Optional.of(CHAIN_TASK));
+        when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
+                .thenReturn(tmp);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(ChainDeal.builder()
+                .chainDealId(CHAIN_DEAL_ID)
+                .tag(BytesUtils.EMPTY_HEX_STRING_32)
+                .build()));
+
+        boolean isWritten = resultService.writeComputedFile(computedFile);
+
+        assertThat(isWritten).isFalse();
+        String writtenComputeFileAsString = FileHelper.readFile(tmp +
+                IexecFileHelper.SLASH_COMPUTED_JSON);
+        assertThat(writtenComputeFileAsString).isEmpty();
     }
 
     @Test
@@ -708,18 +728,17 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
     }
 
     @Test
@@ -731,18 +750,17 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
         String writtenComputeFileAsString = FileHelper.readFile(tmp +
                 IexecFileHelper.SLASH_COMPUTED_JSON);
-        Assertions.assertThat(writtenComputeFileAsString).isEmpty();
+        assertThat(writtenComputeFileAsString).isEmpty();
     }
 
     @Test
@@ -754,15 +772,14 @@ class ResultServiceTests {
                 .build();
 
         when(iexecHubService.getChainTask(CHAIN_TASK_ID))
-                .thenReturn(Optional.of(ChainTask.builder()
-                        .status(ChainTaskStatus.ACTIVE).build()));
+                .thenReturn(Optional.of(CHAIN_TASK));
         when(workerConfigurationService.getTaskOutputDir(CHAIN_TASK_ID))
                 .thenReturn("somewhere");
-        when(iexecHubService.isTeeTask(CHAIN_TASK_ID)).thenReturn(true);
+        when(iexecHubService.getChainDeal(CHAIN_DEAL_ID)).thenReturn(Optional.of(CHAIN_DEAL));
 
         boolean isWritten = resultService.writeComputedFile(computedFile);
 
-        Assertions.assertThat(isWritten).isFalse();
+        assertThat(isWritten).isFalse();
     }
     //endregion
 
@@ -772,7 +789,7 @@ class ResultServiceTests {
         final String uploadToken = "uploadToken";
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenReturn(uploadToken);
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEqualTo(uploadToken);
         verify(signerService).signMessageHash(anyString());
         verify(resultProxyClient).getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION);
     }
@@ -780,7 +797,7 @@ class ResultServiceTests {
     @Test
     void shouldNotGetIexecUploadTokenWorkerpoolAuthorizationSinceSigningReturnsEmpty() {
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(""));
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
         verify(signerService).signMessageHash(anyString());
         verifyNoInteractions(resultProxyClient);
     }
@@ -789,7 +806,7 @@ class ResultServiceTests {
     void shouldNotGetIexecUploadTokenFromWorkerpoolAuthorizationSinceFeignException() {
         when(signerService.signMessageHash(anyString())).thenReturn(new Signature(AUTHORIZATION));
         when(resultProxyClient.getJwt(AUTHORIZATION, WORKERPOOL_AUTHORIZATION)).thenThrow(FeignException.Unauthorized.class);
-        Assertions.assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
+        assertThat(resultService.getIexecUploadToken(WORKERPOOL_AUTHORIZATION)).isEmpty();
     }
 
     @Test
@@ -805,7 +822,7 @@ class ResultServiceTests {
         when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn(signedChallenge);
         when(resultProxyClient.login(chainId, signedChallenge)).thenReturn(uploadToken);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
+        assertThat(resultService.getIexecUploadToken()).isEqualTo(uploadToken);
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -824,7 +841,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(null);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -839,7 +856,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenThrow(RuntimeException.class);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -858,7 +875,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(chainId);
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -880,7 +897,7 @@ class ResultServiceTests {
         when(chainConfig.getChainId()).thenReturn(expectedChainId);
         when(resultProxyClient.getChallenge(expectedChainId)).thenReturn(challenge);
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(expectedChainId);
@@ -902,7 +919,7 @@ class ResultServiceTests {
         when(resultProxyClient.getChallenge(chainId)).thenReturn(challenge);
         when(signerService.signEIP712EntityAndBuildToken(challenge)).thenReturn("");
 
-        Assertions.assertThat(resultService.getIexecUploadToken()).isEmpty();
+        assertThat(resultService.getIexecUploadToken()).isEmpty();
 
         verify(chainConfig, times(1)).getChainId();
         verify(resultProxyClient, times(1)).getChallenge(chainId);
@@ -921,7 +938,7 @@ class ResultServiceTests {
         when(workerConfigurationService.getTaskBaseDir(CHAIN_TASK_ID))
                 .thenReturn(tmp);
 
-        Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+        assertThat(resultService.purgeTask(CHAIN_TASK_ID))
                 .isTrue();
     }
 
@@ -934,7 +951,7 @@ class ResultServiceTests {
             fileHelper.when(() -> FileHelper.deleteFolder(tmp))
                     .thenReturn(false);
 
-            Assertions.assertThat(resultService.purgeTask(CHAIN_TASK_ID))
+            assertThat(resultService.purgeTask(CHAIN_TASK_ID))
                     .isFalse();
         }
     }
@@ -956,8 +973,8 @@ class ResultServiceTests {
 
         resultService.purgeAllTasksData();
 
-        Assertions.assertThat(resultInfoMap).isEmpty();
-        Assertions.assertThat(new File(tmp)).doesNotExist();
+        assertThat(resultInfoMap.isEmpty()).isTrue();
+        assertThat(new File(tmp)).doesNotExist();
     }
     // endregion
 }
