@@ -257,7 +257,7 @@ public class SmsService implements Purgeable {
     }
 
     private String getAuthorizationString(WorkerpoolAuthorization workerpoolAuthorization) {
-        String challenge = workerpoolAuthorization.getHash();
+        final String challenge = workerpoolAuthorization.getHash();
         return signerService.signMessageHash(challenge).getValue();
     }
 
