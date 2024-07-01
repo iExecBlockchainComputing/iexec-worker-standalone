@@ -67,7 +67,6 @@ class ConfigServerClientConfigTests {
                 .iexecHubContractAddress("0xC129e7917b7c7DeDfAa5Fff1FB18d5D7050fE8ca")
                 .blockTime(Duration.ofSeconds(5L))
                 .sidechain(true)
-                .iexecHubContractAddress("0xC129e7917b7c7DeDfAa5Fff1FB18d5D7050fE8ca")
                 .build();
         assertThat(chainConfig).isEqualTo(expectedConfig);
     }
