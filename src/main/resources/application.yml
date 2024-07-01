@@ -130,3 +130,8 @@ tee:
 
 metrics:
   window-size: ${IEXEC_WORKER_METRICS_WINDOW_SIZE:1000}
+
+core:
+  protocol: ${IEXEC_CORE_PROTOCOL:http}
+  host: ${IEXEC_CORE_HOST:localhost}
+  port: ${IEXEC_CORE_PORT:13000}
