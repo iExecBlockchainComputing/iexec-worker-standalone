@@ -24,12 +24,12 @@ All notable changes to this project will be documented in this file.
 - Use latest released libraries and perform minimal updates to build the project. (#23)
 - Repatriate latest PRs from iexec-core to stick to the v8.5.0. (#19, #20, #21, #22)
 - Repatriate latest PRs from iexec-worker to stick to the v8.5.0. (#24, #25, #26)
-- Update project with latest changes from iexec-core v8.5.0 and iexec-worker v8.5.0 releases. (#18)
 
 ### Quality
 
 - Add warning in `README.md`. (#6)
 - Update base code to match new Scheduler version. (#8, #9)
+- Update project with latest changes from iexec-core v8.5.0 and iexec-worker v8.5.0 releases. (#18)
 
 ### Dependency Upgrade
 
