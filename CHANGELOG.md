@@ -17,7 +17,8 @@ All notable changes to this project will be documented in this file.
 - Setup sms-related classes. (#15)
 - Setup result-related classes. (#16)
 - Setup compute- and tee-related classes. (#17)
-- Setup pubsub-related classes. (#18)
+- Update project with latest changes from iexec-core v8.5.0 and iexec-worker v8.5.0 releases. (#18)
+- Setup pubsub-related classes. (#25)
 
 # Bug Fixes
 
