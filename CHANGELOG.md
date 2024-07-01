@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 - Setup result-related classes. (#16)
 - Setup compute- and tee-related classes. (#17)
 - Setup pubsub-related classes. (#25)
+- Setup executor-related classes. (#27)
 
 # Bug Fixes
 
